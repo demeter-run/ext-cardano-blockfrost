@@ -30,7 +30,8 @@ impl Context {
     kind = "BlockfrostPort",
     group = "demeter.run",
     version = "v1alpha1",
-    shortname = "kpts",
+    shortname = "bfpts",
+    category = "demeter-port",
     namespaced
 )]
 #[kube(status = "BlockfrostPortStatus")]
