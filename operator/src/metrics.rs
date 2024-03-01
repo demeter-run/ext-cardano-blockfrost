@@ -108,7 +108,8 @@ pub async fn run_metrics_collector(state: Arc<State>) {
             last_execution = end;
 
             let query = format!(
-                    "sum by (consumer) (increase(kong_http_requests_total{{service='blockfrost-v1-ingress-kong-proxy'}}[{start}s] @ {}))",
+                    "sum by (consumer) (increase(kong_http_requests_total{{service='{}-ingress-kong-proxy'}}[{start}s] @ {}))",
+                    config.ingress_class,
                     end.timestamp_millis() / 1000
                 );
 

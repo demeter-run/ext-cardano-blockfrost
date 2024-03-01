@@ -29,7 +29,7 @@ impl Config {
         Self {
             dns_zone: env::var("DNS_ZONE").unwrap_or("demeter.run".into()),
             ingress_class: env::var("INGRESS_CLASS").unwrap_or("blockfrost-v1".into()),
-            api_key_salt: env::var("API_KEY_SALT").unwrap_or("blockfrost-salt".into()),
+            api_key_salt: env::var("API_KEY_SALT").expect("API_KEY_SALT must be set"),
 
             metrics_delay: Duration::from_secs(
                 std::env::var("METRICS_DELAY")
