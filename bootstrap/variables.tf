@@ -29,7 +29,6 @@ variable "operator_image_tag" {
 
 variable "api_key_salt" {
   type    = string
-  default = "blockfrost-salt"
 }
 
 variable "dcu_per_request" {
@@ -48,12 +47,11 @@ variable "metrics_delay" {
 }
 
 // Instance 
-variable "dbsync_secret_name" {
-  type = string
-}
-
-variable "dbsync_host" {
-  type = string
+variable "dbsync_creds" {
+  type = object({
+    username = string
+    password = string
+  })
 }
 
 // Gateway
@@ -67,8 +65,10 @@ variable "instances" {
     image_tag = string
     network   = string
     salt      = string
-    replicas  = option(number)
-    resources = option(object({
+    replicas  = optional(number)
+    dbsync_database = string
+    dbsync_host = string
+    resources = optional(object({
       limits = object({
         cpu    = string
         memory = string

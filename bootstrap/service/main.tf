@@ -1,6 +1,6 @@
 locals {
   service_name = "blockfrost-${var.network}"
-  port         = 8090
+  port         = 3000
 }
 
 variable "namespace" {

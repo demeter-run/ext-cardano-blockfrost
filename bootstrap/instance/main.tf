@@ -49,7 +49,6 @@ variable "dbsync_host" {
 
 variable "dbsync_database" {
   type    = string
-  default = "cardanodbsync"
 }
 
 variable "dbsync_max_conn" {
