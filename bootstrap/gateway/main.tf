@@ -252,7 +252,7 @@ resource "kubernetes_manifest" "gateway" {
               "from" : "All"
             }
           }
-          "name" : "grpc"
+          "name" : "https-proxy"
           "hostname" : "*.${var.extension_name}.${var.dns_zone}"
           "port" : 443
           "protocol" : "HTTPS"
@@ -281,7 +281,7 @@ resource "kubernetes_manifest" "gateway" {
               {
                 "group" : "",
                 "kind" : "Secret",
-                "name" : "mainnet-${var.extension_name}-wildcard-tls"
+                "name" : "${var.extension_name}-wildcard-tls"
               }
             ]
           }
@@ -301,7 +301,7 @@ resource "kubernetes_manifest" "gateway" {
               {
                 "group" : "",
                 "kind" : "Secret",
-                "name" : "preview-${var.extension_name}-wildcard-tls"
+                "name" : "${var.extension_name}-wildcard-tls"
               }
             ]
           }
@@ -321,7 +321,7 @@ resource "kubernetes_manifest" "gateway" {
               {
                 "group" : "",
                 "kind" : "Secret",
-                "name" : "preprod-${var.extension_name}-wildcard-tls"
+                "name" : "${var.extension_name}-wildcard-tls"
               }
             ]
           }
@@ -357,43 +357,3 @@ resource "kubernetes_manifest" "prometheus_plugin" {
   }
 }
 
-resource "kubernetes_manifest" "certificate_cluster_wildcard_tls" {
-  manifest = {
-    "apiVersion" = "cert-manager.io/v1"
-    "kind"       = "Certificate"
-    "metadata" = {
-      "name"      = "${var.extension_name}-wildcard-tls"
-      "namespace" = var.namespace
-    }
-    "spec" = {
-      "dnsNames" = ["*.${var.extension_name}.demeter.run"]
-
-      "issuerRef" = {
-        "kind" = "ClusterIssuer"
-        "name" = "letsencrypt"
-      }
-      "secretName" = "${var.extension_name}-wildcard-tls"
-    }
-  }
-}
-
-resource "kubernetes_manifest" "certificate_cluster_wildcard_tls_by_network" {
-  for_each = var.networks
-  manifest = {
-    "apiVersion" = "cert-manager.io/v1"
-    "kind"       = "Certificate"
-    "metadata" = {
-      "name"      = "${each.key}-${var.extension_name}-wildcard-tls"
-      "namespace" = var.namespace
-    }
-    "spec" = {
-      "dnsNames" = ["*.${each.key}.${var.extension_name}.demeter.run"]
-
-      "issuerRef" = {
-        "kind" = "ClusterIssuer"
-        "name" = "letsencrypt"
-      }
-      "secretName" = "${each.key}-${var.extension_name}-wildcard-tls"
-    }
-  }
-}

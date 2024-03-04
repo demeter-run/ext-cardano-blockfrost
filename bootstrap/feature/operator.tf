@@ -36,8 +36,8 @@ resource "kubernetes_deployment_v1" "operator" {
           name  = "main"
 
           env {
-            name  = "PORT"
-            value = local.port
+            name  = "ADDR"
+            value = "0.0.0.0:${local.port}"
           }
 
           env {

@@ -4,8 +4,10 @@ locals {
 }
 
 resource "kubernetes_deployment_v1" "blockfrost" {
+  wait_for_rollout = false
   metadata {
-    name = local.name
+    name      = local.name
+    namespace = var.namespace
     labels = {
       "demeter.run/kind"            = "blockfrost_instance"
       "cardano.demeter.run/network" = var.network
@@ -13,11 +15,12 @@ resource "kubernetes_deployment_v1" "blockfrost" {
   }
 
   spec {
-    replicas = spec.replicas
+    replicas = var.replicas
 
     selector {
       match_labels = {
-        "demeter.run/instance" = local.name
+        "demeter.run/instance"        = local.name
+        "cardano.demeter.run/network" = var.network
       }
     }
 
@@ -25,7 +28,8 @@ resource "kubernetes_deployment_v1" "blockfrost" {
       metadata {
         name = local.name
         labels = {
-          "demeter.run/instance" = local.name
+          "demeter.run/instance"        = local.name
+          "cardano.demeter.run/network" = var.network
         }
       }
 
@@ -89,7 +93,7 @@ resource "kubernetes_deployment_v1" "blockfrost" {
 
           env {
             name  = "PGSSLMODE"
-            value = "no-verify"
+            value = "disable"
           }
 
           env {
@@ -109,7 +113,7 @@ resource "kubernetes_deployment_v1" "blockfrost" {
             value_from {
               secret_key_ref {
                 key  = "password"
-                name = spec.dbsync_secret_name
+                name = var.dbsync_secret_name
               }
             }
           }
