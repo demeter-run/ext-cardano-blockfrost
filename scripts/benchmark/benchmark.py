@@ -2,7 +2,7 @@ import argparse
 import time
 
 import pandas as pd
-from blockfrost import BlockFrostApi, ApiError, ApiUrls
+import requests
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
@@ -19,7 +19,7 @@ def get_parser():
     parser.add_argument("-r", "--repetitions", type=int, default=5)
     parser.add_argument("-t", "--timeout", type=int, default=10)
     parser.add_argument("--blockfrost-project-id", default=None)
-    parser.add_argument("--demeter-authorized-url", default=None)
+    parser.add_argument("--demeter-api-key", default=None)
 
     parser.add_argument("--no-build", action="store_true")
 
@@ -44,142 +44,166 @@ def build(args):
     if args.blockfrost_project_id is None:
         raise ValueError("Blockfrost project ID is undefined.")
 
-    blockfrost_api = BlockFrostApi(
-        project_id=args.blockfrost_project_id,
-        base_url=getattr(ApiUrls, args.network).value,
-    )
+    if args.demeter_api_key is None:
+        raise ValueError("Demeter API key is undefined.")
 
-    if args.demeter_authorized_url is None:
-        raise ValueError("Demeter Authorized URL is undefined.")
+    def query_demeter(endpoint, params):
+        response = requests.get(
+            f"https://{args.network}.blockfrost-m1.demeter.run"
+            + endpoint.format(**params),
+            headers={"dmtr-api-key": args.demeter_api_key},
+            timeout=args.timeout,
+        )
+        response.raise_for_status()
 
-    demeter_api = BlockFrostApi(base_url=args.demeter_authorized_url)
-    demeter_api.api_version = ""  # Ugly workaround, but works
+    def query_blockfrost(endpoint, params):
+        response = requests.get(
+            f"https://cardano-{args.network}.blockfrost.io/api/v0"
+            + endpoint.format(**params),
+            headers={"project_id": args.blockfrost_project_id},
+            timeout=args.timeout,
+        )
+        response.raise_for_status()
+        return response.json()
 
     # Get valid parameters for endpoints
     block = None
     block_previous_hash = None
     while block is None:
         if block_previous_hash is None:
-            block = blockfrost_api.block_latest()
+            block = query_blockfrost("/blocks/latest", {})
         else:
-            block = blockfrost_api.block(block_previous_hash)
+            block = query_blockfrost("/blocks/{hash}", {"hash": block_previous_hash})
 
-        block_previous_hash = block.previous_block
-        if block.tx_count == 0:
+        block_previous_hash = block["previous_block"]
+        if block["tx_count"] == 0:
             block = None
 
-    block_hash = block.hash
-    epoch_number = block.epoch
-    slot_number = block.epoch_slot
+    block_hash = block["hash"]
+    epoch_number = block["epoch"]
+    epoch_slot = block["epoch_slot"]
+    block_slot = block["slot"]
 
-    address_object = blockfrost_api.blocks_addresses(block_hash)[0]
-    address = address_object.address
-    tx_hash = address_object.transactions[0].tx_hash
-    stake_address = blockfrost_api.address(address).stake_address
+    address_object = query_blockfrost(f"/blocks/{block_hash}/addresses", {})[0]
+    address = address_object["address"]
+    tx_hash = address_object["transactions"][0]["tx_hash"]
+    stake_address = query_blockfrost(f"/addresses/{address}", {})["stake_address"]
 
-    asset = blockfrost_api.assets()[0].asset
-    policy_id = blockfrost_api.asset(asset).policy_id
+    asset = query_blockfrost(f"/assets", {})[0]["asset"]
+    policy_id = query_blockfrost(f"/assets/{asset}", {})["policy_id"]
 
-    pool_id = blockfrost_api.epoch_stakes(epoch_number)[0].pool_id
-    label = blockfrost_api.metadata_labels()[0].label
-    script_hash = blockfrost_api.scripts()[0].script_hash
+    pool_id = query_blockfrost(f"/epochs/{epoch_number}/stakes", {})[0]["pool_id"]
+    label = query_blockfrost("/metadata/txs/labels", {})[0]["label"]
+    script_hash = query_blockfrost("/scripts", {})[0]["script_hash"]
 
     endpoints = [
         # Health
-        ("health", {}),
-        ("clock", {}),
+        ("/health", {}),
+        ("/health/clock", {}),
         # Nutlink
-        ("nutlink_address", {"address": NUTLINK_ADDRESS}),
-        ("nutlink_address_tickers", {"address": NUTLINK_ADDRESS}),
-        ("nutlink_address_ticker", {"address": NUTLINK_ADDRESS, "ticker": TICKER}),
-        ("nutlink_ticker", {"ticker": TICKER}),
-        # Accounts
-        ("accounts", {"stake_address": stake_address}),
-        ("account_rewards", {"stake_address": stake_address}),
-        ("account_history", {"stake_address": stake_address}),
-        ("account_delegations", {"stake_address": stake_address}),
-        ("account_registrations", {"stake_address": stake_address}),
-        ("account_withdrawals", {"stake_address": stake_address}),
-        ("account_mirs", {"stake_address": stake_address}),
-        ("account_addresses", {"stake_address": stake_address}),
-        ("account_addresses_assets", {"stake_address": stake_address}),
-        ("account_addresses_total", {"stake_address": stake_address}),
-        # Addresses
-        ("address", {"address": address}),
-        ("address_extended", {"address": address}),
-        ("address_total", {"address": address}),
-        ("address_utxos", {"address": address}),
-        ("address_utxos_asset", {"address": address, "asset": asset}),
-        ("address_transactions", {"address": address}),
-        # Assets
-        ("assets", {}),
-        ("asset", {"asset": asset}),
-        ("asset_history", {"asset": asset}),
-        ("asset_transactions", {"asset": asset}),
-        ("asset_addresses", {"asset": asset}),
-        ("assets_policy", {"policy_id": policy_id}),
-        # Blocks
-        ("block_latest", {}),
-        ("block_latest_transactions", {}),
-        ("block", {"hash_or_number": block_hash}),
-        ("block_slot", {"slot_number": slot_number}),
+        ("/nutlink/{address}", {"address": NUTLINK_ADDRESS}),
+        ("/nutlink/{address}/tickers", {"address": NUTLINK_ADDRESS}),
         (
-            "block_epoch_slot",
-            {"slot_number": slot_number, "epoch_number": epoch_number},
+            "/nutlink/{address}/tickets/{ticker}",
+            {"address": NUTLINK_ADDRESS, "ticker": TICKER},
         ),
-        ("blocks_next", {"hash_or_number": block_hash}),
-        ("blocks_previous", {"hash_or_number": block_hash}),
-        ("block_transactions", {"hash_or_number": block_hash}),
-        ("blocks_addresses", {"hash_or_number": block_hash}),
+        ("/nutlink/tickers/{ticker}", {"ticker": TICKER}),
+        # Accounts
+        ("/accounts/{stake_address}", {"stake_address": stake_address}),
+        ("/accounts/{stake_address}/rewards", {"stake_address": stake_address}),
+        ("/accounts/{stake_address}/history", {"stake_address": stake_address}),
+        ("/accounts/{stake_address}/delegations", {"stake_address": stake_address}),
+        ("/accounts/{stake_address}/registrations", {"stake_address": stake_address}),
+        ("/accounts/{stake_address}/withdrawals", {"stake_address": stake_address}),
+        ("/accounts/{stake_address}/mirs", {"stake_address": stake_address}),
+        ("/accounts/{stake_address}/addresses", {"stake_address": stake_address}),
+        (
+            "/accounts/{stake_address}/addresses/assets",
+            {"stake_address": stake_address},
+        ),
+        ("/accounts/{stake_address}/addresses/total", {"stake_address": stake_address}),
+        # Addresses
+        ("/addresses/{address}", {"address": address}),
+        ("/addresses/{address}/extended", {"address": address}),
+        ("/addresses/{address}/total", {"address": address}),
+        ("/addresses/{address}/utxos", {"address": address}),
+        ("/addresses/{address}/utxos/{asset}", {"address": address, "asset": asset}),
+        ("/addresses/{address}/txs", {"address": address}),
+        # Assets
+        ("/assets", {}),
+        ("/assets/{asset}", {"asset": asset}),
+        ("/assets/{asset}/history", {"asset": asset}),
+        ("/assets/{asset}/txs", {"asset": asset}),
+        ("/assets/{asset}/addresses", {"asset": asset}),
+        ("/assets/policy/{policy_id}", {"policy_id": policy_id}),
+        # Blocks
+        ("/blocks/latest", {}),
+        ("/blocks/latest/txs", {}),
+        ("/blocks/{hash_or_number}", {"hash_or_number": block_hash}),
+        ("/blocks/slot/{block_slot}", {"block_slot": block_slot}),
+        (
+            "/blocks/epoch/{epoch_slot}/slot/{block_slot}",
+            {"epoch_slot": epoch_slot, "block_slot": block_slot},
+        ),
+        ("/blocks/{hash_or_number}/next", {"hash_or_number": block_hash}),
+        ("/blocks/{hash_or_number}/previous", {"hash_or_number": block_hash}),
+        ("/blocks/{hash_or_number}/txs", {"hash_or_number": block_hash}),
+        ("/blocks/{hash_or_number}/addresses", {"hash_or_number": block_hash}),
         # Epochs
-        ("epoch_latest", {}),
-        ("epoch_latest_parameters", {}),
-        ("epoch", {"number": epoch_number}),
-        ("epochs_next", {"number": epoch_number}),
-        ("epochs_previous", {"number": epoch_number}),
-        ("epoch_stakes", {"number": epoch_number}),
-        ("epoch_pool_stakes", {"number": epoch_number, "pool_id": pool_id}),
-        ("epoch_blocks", {"number": epoch_number}),
-        ("epoch_pool_blocks", {"number": epoch_number, "pool_id": pool_id}),
-        ("epoch_protocol_parameters", {"number": epoch_number}),
+        ("/epochs/latest", {}),
+        ("/epochs/latest/parameters", {}),
+        ("/epochs/{number}", {"number": epoch_number}),
+        ("/epochs/{number}/next", {"number": epoch_number}),
+        ("/epochs/{number}/previous", {"number": epoch_number}),
+        ("/epochs/{number}/stakes", {"number": epoch_number}),
+        ("/epochs/{number}/blocks", {"number": epoch_number}),
+        (
+            "/epochs/{number}/stakes/{pool_id}",
+            {"number": epoch_number, "pool_id": pool_id},
+        ),
+        (
+            "/epochs/{number}/blocks/{pool_id}",
+            {"number": epoch_number, "pool_id": pool_id},
+        ),
+        ("/epochs/{number}/parameters", {"number": epoch_number}),
         # Ledger
-        ("genesis", {}),
+        ("/genesis", {}),
         # Metadata
-        ("metadata_labels", {}),
-        ("metadata_label_json", {"label": label}),
-        ("metadata_label_cbor", {"label": label}),
+        ("/metadata/txs/labels", {}),
+        ("/metadata/txs/labels/{label}", {"label": label}),
+        ("/metadata/txs/labels/{label}/cbor", {"label": label}),
         # Network
-        ("network", {}),
+        # ("/network", {}),
         # Pools
-        ("pools", {}),
-        ("pools_extended", {}),
-        ("pools_retired", {}),
-        ("pools_retiring", {}),
-        ("pool", {"pool_id": pool_id}),
-        ("pool_history", {"pool_id": pool_id}),
-        ("pool_metadata", {"pool_id": pool_id}),
-        ("pool_relays", {"pool_id": pool_id}),
-        ("pool_delegators", {"pool_id": pool_id}),
-        ("pool_blocks", {"pool_id": pool_id}),
-        ("pool_updates", {"pool_id": pool_id}),
+        ("/pools", {}),
+        ("/pools/extended", {}),
+        ("/pools/retired", {}),
+        ("/pools/retiring", {}),
+        ("/pools/{pool_id}", {"pool_id": pool_id}),
+        ("/pools/{pool_id}/history", {"pool_id": pool_id}),
+        ("/pools/{pool_id}/metadata", {"pool_id": pool_id}),
+        ("/pools/{pool_id}/relays", {"pool_id": pool_id}),
+        ("/pools/{pool_id}/delegators", {"pool_id": pool_id}),
+        ("/pools/{pool_id}/blocks", {"pool_id": pool_id}),
+        ("/pools/{pool_id}/updates", {"pool_id": pool_id}),
         # Transactions
-        ("transaction", {"hash": tx_hash}),
-        ("transaction_utxos", {"hash": tx_hash}),
-        ("transaction_stakes", {"hash": tx_hash}),
-        ("transaction_delegations", {"hash": tx_hash}),
-        ("transaction_withdrawals", {"hash": tx_hash}),
-        ("transaction_mirs", {"hash": tx_hash}),
-        ("transaction_pool_updates", {"hash": tx_hash}),
-        ("transaction_pool_retires", {"hash": tx_hash}),
-        ("transaction_metadata", {"hash": tx_hash}),
-        ("transaction_metadata_cbor", {"hash": tx_hash}),
-        ("transaction_redeemers", {"hash": tx_hash}),
+        ("/txs/{hash}", {"hash": tx_hash}),
+        ("/txs/{hash}/utxos", {"hash": tx_hash}),
+        ("/txs/{hash}/stakes", {"hash": tx_hash}),
+        ("/txs/{hash}/delegations", {"hash": tx_hash}),
+        ("/txs/{hash}/withdrawals", {"hash": tx_hash}),
+        ("/txs/{hash}/mirs", {"hash": tx_hash}),
+        ("/txs/{hash}/pool_updates", {"hash": tx_hash}),
+        ("/txs/{hash}/pool_retires", {"hash": tx_hash}),
+        ("/txs/{hash}/metadata", {"hash": tx_hash}),
+        ("/txs/{hash}/metadata/cbor", {"hash": tx_hash}),
+        ("/txs/{hash}/redeemers", {"hash": tx_hash}),
         # Scripts
-        ("scripts", {}),
-        ("script", {"script_hash": script_hash}),
-        ("script_json", {"script_hash": script_hash}),
-        ("script_cbor", {"script_hash": script_hash}),
-        ("script_redeemers", {"script_hash": script_hash}),
+        ("/scripts", {}),
+        ("/scripts/{script_hash}", {"script_hash": script_hash}),
+        ("/scripts/{script_hash}/json", {"script_hash": script_hash}),
+        ("/scripts/{script_hash}/cbor", {"script_hash": script_hash}),
+        ("/scripts/{script_hash}/redeemers", {"script_hash": script_hash}),
     ]
 
     rows = []
@@ -192,13 +216,11 @@ def build(args):
                 row = {}
                 row["endpoint"] = endpoint
                 row["blockfrost"] = time_function(
-                    lambda: getattr(blockfrost_api, endpoint)(**params)
+                    lambda: query_blockfrost(endpoint, params)
                 )
-                row["demeter"] = time_function(
-                    lambda: getattr(demeter_api, endpoint)(**params)
-                )
+                row["demeter"] = time_function(lambda: query_demeter(endpoint, params))
                 endpoint_rows.append(row)
-        except ApiError as e:
+        except requests.RequestException as e:
             print(f"Error with {endpoint} endpoint: {e}")
         else:
             rows.extend(endpoint_rows)
@@ -210,9 +232,8 @@ def build(args):
 
 def transform(df):
     # Get offset
-    health_endpoint = df[df["endpoint"] == "health"]
+    health_endpoint = df[df["endpoint"] == "/health"]
     offset = health_endpoint["demeter"].mean() - health_endpoint["blockfrost"].mean()
-
     print("Health endpoint offset: {:.2f}s".format(offset))
 
     df["demeter"] = df["demeter"] - offset
