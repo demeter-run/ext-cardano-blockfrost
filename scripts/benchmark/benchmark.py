@@ -130,7 +130,7 @@ def build(args):
         ("/addresses/{address}/utxos/{asset}", {"address": address, "asset": asset}),
         ("/addresses/{address}/txs", {"address": address}),
         # Assets
-        ("/assets", {}),
+        ("/assets?count=10", {}),
         ("/assets/{asset}", {"asset": asset}),
         ("/assets/{asset}/history", {"asset": asset}),
         ("/assets/{asset}/txs", {"asset": asset}),
@@ -146,7 +146,7 @@ def build(args):
             {"epoch_slot": epoch_slot, "block_slot": block_slot},
         ),
         ("/blocks/{hash_or_number}/next", {"hash_or_number": block_hash}),
-        ("/blocks/{hash_or_number}/previous", {"hash_or_number": block_hash}),
+        ("/blocks/{hash_or_number}/previous?count=5", {"hash_or_number": block_hash}),
         ("/blocks/{hash_or_number}/txs", {"hash_or_number": block_hash}),
         ("/blocks/{hash_or_number}/addresses", {"hash_or_number": block_hash}),
         # Epochs
@@ -154,7 +154,7 @@ def build(args):
         ("/epochs/latest/parameters", {}),
         ("/epochs/{number}", {"number": epoch_number}),
         ("/epochs/{number}/next", {"number": epoch_number}),
-        ("/epochs/{number}/previous", {"number": epoch_number}),
+        ("/epochs/{number}/previous?count=5", {"number": epoch_number}),
         ("/epochs/{number}/stakes", {"number": epoch_number}),
         ("/epochs/{number}/blocks", {"number": epoch_number}),
         (
@@ -175,10 +175,10 @@ def build(args):
         # Network
         # ("/network", {}),
         # Pools
-        ("/pools", {}),
-        ("/pools/extended", {}),
-        ("/pools/retired", {}),
-        ("/pools/retiring", {}),
+        ("/pools?count=10", {}),
+        ("/pools/extended?count=10", {}),
+        ("/pools/retired?count=10", {}),
+        ("/pools/retiring?count=10", {}),
         ("/pools/{pool_id}", {"pool_id": pool_id}),
         ("/pools/{pool_id}/history", {"pool_id": pool_id}),
         ("/pools/{pool_id}/metadata", {"pool_id": pool_id}),
