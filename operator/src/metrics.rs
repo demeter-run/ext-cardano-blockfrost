@@ -1,13 +1,16 @@
-use serde::{Deserialize, Deserializer};
-use std::sync::Arc;
-
 use chrono::Utc;
+use http_body_util::{combinators::BoxBody, BodyExt, Full};
+use hyper::{body::Bytes, server::conn::http1, service::service_fn, Response};
+use hyper_util::rt::TokioIo;
 use kube::{Resource, ResourceExt};
-use prometheus::{opts, IntCounterVec, Registry};
+use prometheus::{opts, Encoder, IntCounterVec, Registry, TextEncoder};
 use regex::Regex;
+use serde::{Deserialize, Deserializer};
+use std::{net::SocketAddr, str::FromStr, sync::Arc};
+use tokio::net::TcpListener;
 use tracing::{error, info, instrument};
 
-use crate::{get_config, BlockfrostPort, Error, Network, State};
+use crate::{get_config, BlockfrostPort, Error, State};
 
 #[derive(Clone)]
 pub struct Metrics {
@@ -71,8 +74,7 @@ impl Metrics {
             .inc()
     }
 
-    pub fn count_dcu_consumed(&self, ns: &str, network: Network, dcu: f64) {
-        let project = ns.split_once("prj-").unwrap().1;
+    pub fn count_dcu_consumed(&self, project: &str, network: &str, dcu: f64) {
         let service = format!("{}-{}", BlockfrostPort::kind(&()), network);
         let service_type = format!(
             "{}.{}",
@@ -90,13 +92,14 @@ impl Metrics {
 }
 
 #[instrument("metrics collector run", skip_all)]
-pub async fn run_metrics_collector(state: Arc<State>) {
+pub fn run_metrics_collector(state: Arc<State>) {
     tokio::spawn(async move {
         info!("collecting metrics running");
 
         let config = get_config();
         let client = reqwest::Client::builder().build().unwrap();
-        let regex = Regex::new(r"(.+)\.(.+)-.+").unwrap();
+        let project_regex = Regex::new(r"prj-(.+)\..+").unwrap();
+        let network_regex = Regex::new(r"blockfrost-([\w]+)-.+").unwrap();
         let mut last_execution = Utc::now();
 
         loop {
@@ -108,10 +111,9 @@ pub async fn run_metrics_collector(state: Arc<State>) {
             last_execution = end;
 
             let query = format!(
-                    "sum by (consumer) (increase(kong_http_requests_total{{service='{}-ingress-kong-proxy'}}[{start}s] @ {}))",
-                    config.ingress_class,
-                    end.timestamp_millis() / 1000
-                );
+                "sum by (consumer, exported_instance) (increase(blockfrost_proxy_http_total_request[{start}s] @ {}))",
+                end.timestamp_millis() / 1000
+            );
 
             let result = client
                 .get(format!("{}/query?query={query}", config.prometheus_url))
@@ -138,52 +140,133 @@ pub async fn run_metrics_collector(state: Arc<State>) {
             }
 
             let response = response.json::<PrometheusResponse>().await.unwrap();
-
             for result in response.data.result {
-                if let Some(consumer) = result.metric.consumer {
-                    let captures = regex.captures(&consumer).unwrap();
-
-                    let namespace = captures.get(1).unwrap().as_str();
-                    let network: Network = captures.get(2).unwrap().as_str().try_into().unwrap();
-
-                    if result.value == 0.0 {
-                        continue;
-                    }
-
-                    let dcu_per_request = match network {
-                        Network::Mainnet => config.dcu_per_request_mainnet,
-                        Network::Preprod => config.dcu_per_request_preprod,
-                        Network::Preview => config.dcu_per_request_preview,
-                        Network::Sanchonet => config.dcu_per_request_sanchonet,
-                    };
-
-                    let dcu = result.value * dcu_per_request;
-                    state.metrics.count_dcu_consumed(namespace, network, dcu);
+                if result.value == 0.0
+                    || result.metric.consumer.is_none()
+                    || result.metric.exported_instance.is_none()
+                {
+                    continue;
                 }
+
+                let consumer = result.metric.consumer.unwrap();
+                let project_captures = project_regex.captures(&consumer);
+                if project_captures.is_none() {
+                    continue;
+                }
+                let project_captures = project_captures.unwrap();
+                let project = project_captures.get(1).unwrap().as_str();
+
+                let instance = result.metric.exported_instance.unwrap();
+                let network_captures = network_regex.captures(&instance);
+                if network_captures.is_none() {
+                    continue;
+                }
+                let network_captures = network_captures.unwrap();
+                let network = network_captures.get(1).unwrap().as_str();
+
+                let dcu_per_frame = config.dcu_per_frame.get(network);
+                if dcu_per_frame.is_none() {
+                    let error = Error::ConfigError(format!(
+                        "dcu_per_frame not configured to {} network",
+                        network
+                    ));
+                    error!(error = error.to_string());
+                    state.metrics.metrics_failure(&error);
+                    continue;
+                }
+                let dcu_per_frame = dcu_per_frame.unwrap();
+
+                let dcu = result.value * dcu_per_frame;
+                state.metrics.count_dcu_consumed(project, network, dcu);
             }
         }
     });
 }
 
-#[derive(Deserialize)]
-struct PrometheusDataResultMetric {
-    consumer: Option<String>,
+pub fn run_metrics_server(state: Arc<State>) {
+    tokio::spawn(async move {
+        let addr = std::env::var("ADDR").unwrap_or("0.0.0.0:8080".into());
+        let addr_result = SocketAddr::from_str(&addr);
+        if let Err(err) = addr_result {
+            error!(error = err.to_string(), "invalid prometheus addr");
+            std::process::exit(1);
+        }
+        let addr = addr_result.unwrap();
+
+        let listener_result = TcpListener::bind(addr).await;
+        if let Err(err) = listener_result {
+            error!(
+                error = err.to_string(),
+                "fail to bind tcp prometheus server listener"
+            );
+            std::process::exit(1);
+        }
+        let listener = listener_result.unwrap();
+
+        info!(addr = addr.to_string(), "metrics listening");
+
+        loop {
+            let state = state.clone();
+
+            let accept_result = listener.accept().await;
+            if let Err(err) = accept_result {
+                error!(error = err.to_string(), "accept client prometheus server");
+                continue;
+            }
+            let (stream, _) = accept_result.unwrap();
+
+            let io = TokioIo::new(stream);
+
+            tokio::task::spawn(async move {
+                let service = service_fn(move |_| api_get_metrics(state.clone()));
+
+                if let Err(err) = http1::Builder::new().serve_connection(io, service).await {
+                    error!(error = err.to_string(), "failed metrics server connection");
+                }
+            });
+        }
+    });
 }
 
-#[derive(Deserialize)]
+async fn api_get_metrics(
+    state: Arc<State>,
+) -> Result<Response<BoxBody<Bytes, hyper::Error>>, hyper::Error> {
+    let metrics = state.metrics_collected();
+
+    let encoder = TextEncoder::new();
+    let mut buffer = vec![];
+    encoder.encode(&metrics, &mut buffer).unwrap();
+
+    let res = Response::builder()
+        .body(
+            Full::new(buffer.into())
+                .map_err(|never| match never {})
+                .boxed(),
+        )
+        .unwrap();
+    Ok(res)
+}
+
+#[derive(Debug, Deserialize)]
+struct PrometheusDataResultMetric {
+    consumer: Option<String>,
+    exported_instance: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
 struct PrometheusDataResult {
     metric: PrometheusDataResultMetric,
     #[serde(deserialize_with = "deserialize_value")]
     value: f64,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct PrometheusData {
     result: Vec<PrometheusDataResult>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct PrometheusResponse {
     data: PrometheusData,
 }
