@@ -10,10 +10,9 @@ use pingora_limits::rate::Rate;
 use regex::Regex;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
-use tokio::runtime::Runtime;
 use tracing::info;
 
-use crate::cache_rules::CacheRule;
+use crate::cache_rules::{runtime_handle, CacheRule};
 use crate::config::Config;
 use crate::{Consumer, State, Tier};
 
@@ -201,11 +200,8 @@ impl ProxyHttp for BlockfrostProxy {
     fn request_cache_filter(&self, session: &mut Session, _ctx: &mut Self::CTX) -> Result<()> {
         let path = session.req_header().uri.path();
 
-        // Create the runtime
-        let rt = Runtime::new().unwrap();
-
         // Execute the future, blocking the current thread until completion
-        if rt.block_on(self.should_cache(path)) {
+        if runtime_handle().block_on(self.should_cache(path)) {
             session.cache.enable(State::get_cache(), None, None, None);
         }
         Ok(())
@@ -218,8 +214,7 @@ impl ProxyHttp for BlockfrostProxy {
         _ctx: &mut Self::CTX,
     ) -> Result<RespCacheable> {
         let path = session.req_header().uri.path();
-        let rt = Runtime::new().unwrap();
-        let rule = rt.block_on(self.get_rule(path)).unwrap();
+        let rule = runtime_handle().block_on(self.get_rule(path)).unwrap();
 
         Ok(RespCacheable::Cacheable(CacheMeta::new(
             SystemTime::now()

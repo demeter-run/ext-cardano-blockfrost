@@ -60,7 +60,7 @@ impl CacheRuleBackgroundService {
     }
 }
 
-fn runtime_handle() -> Handle {
+pub fn runtime_handle() -> Handle {
     match Handle::try_current() {
         Ok(h) => h,
         Err(_) => {
