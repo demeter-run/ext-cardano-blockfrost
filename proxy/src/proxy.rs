@@ -1,14 +1,19 @@
 use async_trait::async_trait;
+use pingora::http::ResponseHeader;
 use pingora::Result;
 use pingora::{
     proxy::{ProxyHttp, Session},
     upstreams::peer::HttpPeer,
 };
+use pingora_cache::{CacheKey, CacheMeta, RespCacheable};
 use pingora_limits::rate::Rate;
 use regex::Regex;
 use std::sync::Arc;
+use std::time::{Duration, SystemTime};
+use tokio::runtime::Runtime;
 use tracing::info;
 
+use crate::cache_rules::CacheRule;
 use crate::config::Config;
 use crate::{Consumer, State, Tier};
 
@@ -73,6 +78,38 @@ impl BlockfrostProxy {
 
         Ok(false)
     }
+
+    fn extract_key_and_network(&self, session: &Session) -> (String, String) {
+        let host = session
+            .get_header("host")
+            .map(|v| v.to_str().unwrap())
+            .unwrap();
+
+        let captures = self.host_regex.captures(host).unwrap();
+        let network = captures.get(2).unwrap().as_str().to_string();
+        let mut key = session
+            .get_header(DMTR_API_KEY)
+            .map(|v| v.to_str().unwrap())
+            .unwrap_or_default();
+        if let Some(m) = captures.get(1) {
+            key = m.as_str();
+        }
+        (key.to_string(), network)
+    }
+
+    async fn should_cache(&self, path: &str) -> bool {
+        self.get_rule(path).await.is_some()
+    }
+
+    async fn get_rule(&self, path: &str) -> Option<CacheRule> {
+        let rules = self.state.cache_rules.read().await.clone();
+        for rule in rules.into_iter() {
+            if rule.matches(path) {
+                return Some(rule);
+            }
+        }
+        None
+    }
 }
 
 #[derive(Debug, Default)]
@@ -94,23 +131,8 @@ impl ProxyHttp for BlockfrostProxy {
     {
         let state = self.state.clone();
 
-        let host = session
-            .get_header("host")
-            .map(|v| v.to_str().unwrap())
-            .unwrap();
-
-        let captures = self.host_regex.captures(host).unwrap();
-        let network = captures.get(2).unwrap().as_str().to_string();
-
-        let mut key = session
-            .get_header(DMTR_API_KEY)
-            .map(|v| v.to_str().unwrap())
-            .unwrap_or_default();
-        if let Some(m) = captures.get(1) {
-            key = m.as_str();
-        }
-
-        let consumer = state.get_consumer(&network, key).await;
+        let (key, network) = self.extract_key_and_network(session);
+        let consumer = state.get_consumer(&network, &key).await;
         if consumer.is_none() {
             return Err(pingora::Error::new(pingora::ErrorType::HTTPStatus(401)));
         }
@@ -161,5 +183,52 @@ impl ProxyHttp for BlockfrostProxy {
             &ctx.instance,
             &response_code,
         );
+    }
+
+    // Cache related stuff
+
+    /// Build cache key from the request.
+    fn cache_key_callback(&self, session: &Session, _ctx: &mut Self::CTX) -> Result<CacheKey> {
+        let req_header = session.req_header();
+        let (_, network) = self.extract_key_and_network(session);
+        Ok(CacheKey::new(
+            network,
+            req_header.uri.to_string(),
+            "".to_string(),
+        ))
+    }
+
+    fn request_cache_filter(&self, session: &mut Session, _ctx: &mut Self::CTX) -> Result<()> {
+        let path = session.req_header().uri.path();
+
+        // Create the runtime
+        let rt = Runtime::new().unwrap();
+
+        // Execute the future, blocking the current thread until completion
+        if rt.block_on(self.should_cache(path)) {
+            session.cache.enable(State::get_cache(), None, None, None);
+        }
+        Ok(())
+    }
+
+    fn response_cache_filter(
+        &self,
+        session: &Session,
+        resp: &ResponseHeader,
+        _ctx: &mut Self::CTX,
+    ) -> Result<RespCacheable> {
+        let path = session.req_header().uri.path();
+        let rt = Runtime::new().unwrap();
+        let rule = rt.block_on(self.get_rule(path)).unwrap();
+
+        Ok(RespCacheable::Cacheable(CacheMeta::new(
+            SystemTime::now()
+                .checked_add(Duration::new(rule.duration, 0))
+                .unwrap(),
+            SystemTime::now(),
+            0,
+            0,
+            resp.clone(),
+        )))
     }
 }

@@ -1,6 +1,8 @@
 use auth::AuthBackgroundService;
+use cache_rules::{CacheRule, CacheRuleBackgroundService};
 use config::Config;
 use dotenv::dotenv;
+use once_cell::sync::Lazy;
 use pingora::{
     server::{configuration::Opt, Server},
     services::background::background_service,
@@ -8,6 +10,7 @@ use pingora::{
 use pingora_limits::rate::Rate;
 use prometheus::{opts, register_int_counter_vec};
 use proxy::BlockfrostProxy;
+use redb_storage::ReDbCache;
 use regex::Regex;
 use serde::{Deserialize, Deserializer};
 use std::{collections::HashMap, fmt::Display, sync::Arc, time::Duration};
@@ -16,9 +19,13 @@ use tokio::sync::RwLock;
 use tracing::Level;
 
 mod auth;
+mod cache_rules;
 mod config;
 mod proxy;
+mod redb_storage;
 mod tiers;
+
+static CACHE: Lazy<ReDbCache> = Lazy::new(|| ReDbCache::new(Config::new().cache_db_path));
 
 fn main() {
     dotenv().ok();
@@ -37,6 +44,12 @@ fn main() {
         AuthBackgroundService::new(state.clone()),
     );
     server.add_service(auth_background_service);
+
+    let cache_rules_background_service = background_service(
+        "K8S Cache Rule Service",
+        CacheRuleBackgroundService::new(state.clone(), config.clone()),
+    );
+    server.add_service(cache_rules_background_service);
 
     let tier_background_service = background_service(
         "K8S Tier Service",
@@ -70,12 +83,17 @@ pub struct State {
     tiers: RwLock<HashMap<String, Tier>>,
     limiter: RwLock<HashMap<String, Vec<(TierRate, Rate)>>>,
     metrics: Metrics,
+    cache_rules: RwLock<Vec<CacheRule>>,
 }
 impl State {
     pub async fn get_consumer(&self, network: &str, key: &str) -> Option<Consumer> {
         let consumers = self.consumers.read().await.clone();
         let hash_key = format!("{}.{}", network, key);
         consumers.get(&hash_key).cloned()
+    }
+
+    pub fn get_cache() -> &'static ReDbCache {
+        &CACHE
     }
 }
 

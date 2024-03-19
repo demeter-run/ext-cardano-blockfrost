@@ -10,6 +10,10 @@ pub struct Config {
     pub ssl_key_path: String,
     pub blockfrost_port: u16,
     pub blockfrost_dns: String,
+
+    // Cache settings
+    pub cache_rules_path: PathBuf,
+    pub cache_db_path: String,
 }
 impl Config {
     pub fn new() -> Self {
@@ -27,6 +31,10 @@ impl Config {
                 .parse()
                 .expect("BLOCKFROST_PORT must a number"),
             blockfrost_dns: env::var("BLOCKFROST_DNS").expect("BLOCKFROST_DNS must be set"),
+            cache_rules_path: env::var("CACHE_RULES_PATH")
+                .map(|v| v.into())
+                .expect("PROXY_TIERS_PATH must be set"),
+            cache_db_path: env::var("CACHE_DB_PATH").expect("CACHE_DB_PATH must be set"),
         }
     }
 }
