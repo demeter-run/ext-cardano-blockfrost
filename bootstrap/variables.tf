@@ -72,26 +72,26 @@ variable "proxy_replicas" {
 variable "proxy_resources" {
   type = object({
     limits = object({
-      cpu    = string
-      memory = string
+      cpu               = string
+      memory            = string
+      ephemeral_storage = string
     })
     requests = object({
-      cpu    = string
-      memory = string
+      cpu               = string
+      memory            = string
+      ephemeral_storage = string
     })
-    storage_size  = string
-    storage_class = string
   })
   default = {
     limits : {
       cpu : "50m",
       memory : "250Mi"
-      ephemeral_storage = "4Gi"
+      ephemeral_storage : "4Gi"
     }
     requests : {
       cpu : "50m",
       memory : "250Mi"
-      ephemeral_storage = "4Gi"
+      ephemeral_storage : "4Gi"
     }
   }
 }

@@ -38,12 +38,12 @@ variable "resources" {
     limits : {
       cpu : "50m",
       memory : "250Mi"
-      ephemeral_storage = "4Gi"
+      ephemeral_storage: "4Gi"
     }
     requests : {
       cpu : "50m",
       memory : "250Mi"
-      ephemeral_storage = "4Gi"
+      ephemeral_storage: "4Gi"
     }
   }
 }
