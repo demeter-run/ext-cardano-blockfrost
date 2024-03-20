@@ -1,4 +1,8 @@
 [[rules]]
+  endpoint = "/blocks/latest.*"
+  duration = 20
+
+[[rules]]
   endpoint = "/blocks/*"
   duration = 120
 
