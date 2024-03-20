@@ -1,47 +1,47 @@
 [[rules]]
   endpoint = "/blocks/latest.*"
-  duration = 20
+  duration_s = 20
 
 [[rules]]
   endpoint = "/blocks/*"
-  duration = 120
+  duration_s = 120
 
 [[rules]]
   endpoint = "/nutlink/*"
-  duration = 20
+  duration_s = 20
 
 [[rules]]
   endpoint = "/accounts/*"
-  duration = 20
+  duration_s = 20
 
 [[rules]]
   endpoint = "/addresses/*"
-  duration = 20
+  duration_s = 20
 
 [[rules]]
   endpoint = "/assets/*"
-  duration = 120
+  duration_s = 120
 
 [[rules]]
   endpoint = "/epochs/latest.*"
-  duration = 20
+  duration_s = 20
 
 [[rules]]
   endpoint = "/epochs/*"
-  duration = 300
+  duration_s = 300
 
 [[rules]]
   endpoint = "/genesis"
-  duration = 3600
+  duration_s = 3600
 
 [[rules]]
   endpoint = "/txs/*"
-  duration = 300
+  duration_s = 300
 
 [[rules]]
   endpoint = "/scripts"
-  duration = 20
+  duration_s = 20
 
 [[rules]]
   endpoint = "/scripts/*"
-  duration = 300
+  duration_s = 300

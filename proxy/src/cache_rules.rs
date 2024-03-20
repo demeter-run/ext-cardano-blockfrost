@@ -16,7 +16,7 @@ use crate::{config::Config, State};
 pub struct CacheRule {
     #[serde(deserialize_with = "deserialize_endpoint")]
     pub endpoint: Regex,
-    pub duration: u64,
+    pub duration_s: u64,
 }
 pub fn deserialize_endpoint<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Regex, D::Error> {
     let value: String = Deserialize::deserialize(deserializer)?;
@@ -125,11 +125,11 @@ mod test {
     async fn test_deserialize() {
         let value = json!({
             "endpoint": "/cacheable.*",
-            "duration": 42,
+            "duration_s": 42,
         });
         let cache_rule: CacheRule = serde_json::from_value(value).expect("Fail to deserialize");
         assert!(cache_rule.matches("/cacheable"));
         assert!(cache_rule.matches("/cacheable/subpath"));
-        assert_eq!(cache_rule.duration, 42);
+        assert_eq!(cache_rule.duration_s, 42);
     }
 }

@@ -220,7 +220,7 @@ impl ProxyHttp for BlockfrostProxy {
 
         Ok(RespCacheable::Cacheable(CacheMeta::new(
             SystemTime::now()
-                .checked_add(Duration::new(rule.duration, 0))
+                .checked_add(Duration::new(rule.duration_s, 0))
                 .unwrap(),
             SystemTime::now(),
             0,
