@@ -79,7 +79,7 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
 
           env {
             name  = "DEFAULT_BLOCKFROST_VERSION"
-            value = "v2"
+            value = "v1"
           }
 
           env {
@@ -140,7 +140,7 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
         volume {
           name = "ephemeral"
           empty_dir {
-            size_limit = "500Mi"
+            size_limit = "4Gi"
           }
         }
 
