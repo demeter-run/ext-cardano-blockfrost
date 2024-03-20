@@ -65,7 +65,7 @@ variable "networks" {
 
 variable "versions" {
   type = list(string)
-  default = ["2"]
+  default = ["1"]
 }
 
 variable "dns_zone" {
