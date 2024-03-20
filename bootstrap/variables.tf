@@ -17,6 +17,11 @@ variable "ingress_class" {
   default = "blockfrost-m1"
 }
 
+variable "extension_subdomain" {
+  type    = string
+  default = "blockfrost-m1"
+}
+
 variable "networks" {
   type    = list(string)
   default = ["mainnet", "preprod", "preview"]
@@ -28,7 +33,7 @@ variable "operator_image_tag" {
 }
 
 variable "api_key_salt" {
-  type    = string
+  type = string
 }
 
 variable "dcu_per_request" {
@@ -54,20 +59,51 @@ variable "dbsync_creds" {
   })
 }
 
-// Gateway
-variable "gateway_replicas" {
+// Proxy
+variable "proxy_image_tag" {
+  type = string
+}
+
+variable "proxy_replicas" {
   type    = number
   default = 1
 }
 
+variable "proxy_resources" {
+  type = object({
+    limits = object({
+      cpu    = string
+      memory = string
+    })
+    requests = object({
+      cpu    = string
+      memory = string
+    })
+    storage_size  = string
+    storage_class = string
+  })
+  default = {
+    limits : {
+      cpu : "50m",
+      memory : "250Mi"
+      ephemeral_storage = "4Gi"
+    }
+    requests : {
+      cpu : "50m",
+      memory : "250Mi"
+      ephemeral_storage = "4Gi"
+    }
+  }
+}
+
 variable "instances" {
   type = map(object({
-    image_tag = string
-    network   = string
-    salt      = string
-    replicas  = optional(number)
+    image_tag       = string
+    network         = string
+    salt            = string
+    replicas        = optional(number)
     dbsync_database = string
-    dbsync_host = string
+    dbsync_host     = string
     resources = optional(object({
       limits = object({
         cpu    = string

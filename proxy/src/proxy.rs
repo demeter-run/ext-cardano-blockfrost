@@ -12,7 +12,7 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tracing::info;
 
-use crate::cache_rules::{runtime_handle, CacheRule};
+use crate::cache_rules::CacheRule;
 use crate::config::Config;
 use crate::{Consumer, State, Tier};
 
@@ -96,10 +96,6 @@ impl BlockfrostProxy {
         (key.to_string(), network)
     }
 
-    async fn should_cache(&self, path: &str) -> bool {
-        self.get_rule(path).await.is_some()
-    }
-
     async fn get_rule(&self, path: &str) -> Option<CacheRule> {
         let rules = self.state.cache_rules.read().await.clone();
         for rule in rules.into_iter() {
@@ -115,6 +111,7 @@ impl BlockfrostProxy {
 pub struct Context {
     instance: String,
     consumer: Consumer,
+    cache_rule: Option<CacheRule>,
 }
 
 #[async_trait]
@@ -147,7 +144,13 @@ impl ProxyHttp for BlockfrostProxy {
             return Ok(true);
         }
 
-        *ctx = Context { instance, consumer };
+        let path = session.req_header().uri.path();
+        let cache_rule = self.get_rule(path).await;
+        *ctx = Context {
+            instance,
+            consumer,
+            cache_rule,
+        };
 
         Ok(false)
     }
@@ -192,16 +195,13 @@ impl ProxyHttp for BlockfrostProxy {
         let (_, network) = self.extract_key_and_network(session);
         Ok(CacheKey::new(
             network,
-            req_header.uri.to_string(),
+            req_header.uri.path(),
             "".to_string(),
         ))
     }
 
-    fn request_cache_filter(&self, session: &mut Session, _ctx: &mut Self::CTX) -> Result<()> {
-        let path = session.req_header().uri.path();
-
-        // Execute the future, blocking the current thread until completion
-        if runtime_handle().block_on(self.should_cache(path)) {
+    fn request_cache_filter(&self, session: &mut Session, ctx: &mut Self::CTX) -> Result<()> {
+        if ctx.cache_rule.is_some() {
             session.cache.enable(State::get_cache(), None, None, None);
         }
         Ok(())
@@ -209,12 +209,14 @@ impl ProxyHttp for BlockfrostProxy {
 
     fn response_cache_filter(
         &self,
-        session: &Session,
+        _session: &Session,
         resp: &ResponseHeader,
-        _ctx: &mut Self::CTX,
+        ctx: &mut Self::CTX,
     ) -> Result<RespCacheable> {
-        let path = session.req_header().uri.path();
-        let rule = runtime_handle().block_on(self.get_rule(path)).unwrap();
+        let rule = ctx
+            .cache_rule
+            .clone()
+            .expect("Cache rule unexpectedly None.");
 
         Ok(RespCacheable::Cacheable(CacheMeta::new(
             SystemTime::now()

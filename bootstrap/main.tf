@@ -24,25 +24,27 @@ resource "kubernetes_secret" "blockfrost" {
 
 
 module "blockfrost_v1_feature" {
-  depends_on         = [kubernetes_namespace.namespace]
-  source             = "./feature"
-  namespace          = var.namespace
-  operator_image_tag = var.operator_image_tag
-  metrics_delay      = var.metrics_delay
-  ingress_class      = var.ingress_class
-  dns_zone           = var.dns_zone
-  api_key_salt       = var.api_key_salt
-  dcu_per_request    = var.dcu_per_request
+  depends_on          = [kubernetes_namespace.namespace]
+  source              = "./feature"
+  namespace           = var.namespace
+  operator_image_tag  = var.operator_image_tag
+  metrics_delay       = var.metrics_delay
+  extension_subdomain = var.extension_subdomain
+  dns_zone            = var.dns_zone
+  api_key_salt        = var.api_key_salt
+  dcu_per_request     = var.dcu_per_request
 }
 
-module "blockfrost_v1_gateway" {
-  depends_on     = [kubernetes_namespace.namespace]
-  source         = "./gateway"
-  namespace      = var.namespace
-  replicas       = var.gateway_replicas
-  dns_zone       = var.dns_zone
-  networks       = var.networks
-  extension_name = var.extension_name
+module "blockfrost_v1_proxy" {
+  depends_on      = [kubernetes_namespace.namespace]
+  source          = "./proxy"
+  namespace       = var.namespace
+  replicas        = var.proxy_replicas
+  extension_name  = var.extension_name
+  networks        = var.networks
+  dns_zone        = var.dns_zone
+  proxy_image_tag = var.proxy_image_tag
+  resources       = var.proxy_resources
 }
 
 module "blockfrost_instances" {
