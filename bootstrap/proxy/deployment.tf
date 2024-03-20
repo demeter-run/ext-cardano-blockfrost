@@ -31,12 +31,14 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
 
           resources {
             limits = {
-              cpu    = var.resources.limits.cpu
-              memory = var.resources.limits.memory
+              cpu               = var.resources.limits.cpu
+              memory            = var.resources.limits.memory
+              ephemeral_storage = var.resources.limits.ephemeral_storage
             }
             requests = {
-              cpu    = var.resources.requests.cpu
-              memory = var.resources.requests.memory
+              cpu               = var.resources.requests.cpu
+              memory            = var.resources.requests.memory
+              ephemeral_storage = var.resources.requests.ephemeral_storage
             }
           }
 
@@ -99,12 +101,12 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
 
           env {
             name  = "CACHE_RULES_PATH"
-            value = "/configs/tiers.toml"
+            value = "/configs/cache_rules.toml"
           }
 
           env {
             name  = "CACHE_DB_PATH"
-            value = "/tmp/cache.redb"
+            value = "/cache/cache.redb"
           }
 
           volume_mount {
@@ -119,7 +121,7 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
 
           volume_mount {
             name       = "ephemeral"
-            mount_path = "/tmp"
+            mount_path = "/cache"
           }
         }
 
@@ -140,7 +142,7 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
         volume {
           name = "ephemeral"
           empty_dir {
-            size_limit = "4Gi"
+            size_limit = var.resources.limits.ephemeral_storage
           }
         }
 
