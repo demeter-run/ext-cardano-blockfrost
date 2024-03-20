@@ -102,6 +102,11 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
             value = "/configs/tiers.toml"
           }
 
+          env {
+            name  = "CACHE_DB_PATH"
+            value = "/tmp/cache.redb"
+          }
+
           volume_mount {
             mount_path = "/certs"
             name       = "certs"
