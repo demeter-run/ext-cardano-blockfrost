@@ -49,8 +49,7 @@ def build(args):
 
     def query_demeter(endpoint, params):
         response = requests.get(
-            # f"https://{args.network}.blockfrost-m1.demeter.run"
-            f"http://dmtr_token.mainnet-v1.blockfrost-m1.test:8000"
+            f"https://{args.network}.blockfrost-m1.demeter.run"
             + endpoint.format(**params),
             headers={"dmtr-api-key": args.demeter_api_key},
             timeout=args.timeout,
@@ -170,23 +169,23 @@ def build(args):
         # Ledger
         ("/genesis", {}),
         # Metadata
-        # ("/metadata/txs/labels", {}),
-        # ("/metadata/txs/labels/{label}", {"label": label}),
-        # ("/metadata/txs/labels/{label}/cbor", {"label": label}),
+        ("/metadata/txs/labels", {}),
+        ("/metadata/txs/labels/{label}", {"label": label}),
+        ("/metadata/txs/labels/{label}/cbor", {"label": label}),
         # Network
         # ("/network", {}),
         # Pools
-        # ("/pools?count=10", {}),
-        # ("/pools/extended?count=10", {}),
-        # ("/pools/retired?count=10", {}),
-        # ("/pools/retiring?count=10", {}),
-        # ("/pools/{pool_id}", {"pool_id": pool_id}),
-        # ("/pools/{pool_id}/history", {"pool_id": pool_id}),
-        # ("/pools/{pool_id}/metadata", {"pool_id": pool_id}),
-        # ("/pools/{pool_id}/relays", {"pool_id": pool_id}),
-        # ("/pools/{pool_id}/delegators", {"pool_id": pool_id}),
-        # ("/pools/{pool_id}/blocks", {"pool_id": pool_id}),
-        # ("/pools/{pool_id}/updates", {"pool_id": pool_id}),
+        ("/pools?count=10", {}),
+        ("/pools/extended?count=10", {}),
+        ("/pools/retired?count=10", {}),
+        ("/pools/retiring?count=10", {}),
+        ("/pools/{pool_id}", {"pool_id": pool_id}),
+        ("/pools/{pool_id}/history", {"pool_id": pool_id}),
+        ("/pools/{pool_id}/metadata", {"pool_id": pool_id}),
+        ("/pools/{pool_id}/relays", {"pool_id": pool_id}),
+        ("/pools/{pool_id}/delegators", {"pool_id": pool_id}),
+        ("/pools/{pool_id}/blocks", {"pool_id": pool_id}),
+        ("/pools/{pool_id}/updates", {"pool_id": pool_id}),
         # Transactions
         ("/txs/{hash}", {"hash": tx_hash}),
         ("/txs/{hash}/utxos", {"hash": tx_hash}),
