@@ -56,23 +56,8 @@ resource "kubernetes_deployment_v1" "operator" {
           }
 
           env {
-            name  = "DCU_PER_REQUEST_MAINNET"
-            value = var.dcu_per_request["mainnet"]
-          }
-
-          env {
-            name  = "DCU_PER_REQUEST_PREPROD"
-            value = var.dcu_per_request["preprod"]
-          }
-
-          env {
-            name  = "DCU_PER_REQUEST_PREVIEW"
-            value = var.dcu_per_request["preview"]
-          }
-
-          env {
-            name  = "DCU_PER_REQUEST_SANCHONET"
-            value = var.dcu_per_request["sanchonet"]
+            name  = "DCU_PER_REQUEST"
+            value = "mainnet=${var.dcu_per_request["mainnet"]},preprod=${var.dcu_per_request["preprod"]},preview=${var.dcu_per_request["preview"]}"
           }
 
           env {
@@ -81,8 +66,8 @@ resource "kubernetes_deployment_v1" "operator" {
           }
 
           env {
-            name  = "INGRESS_CLASS"
-            value = var.ingress_class
+            name  = "EXTENSION_SUBDOMAIN"
+            value = var.extension_subdomain
           }
 
           env {

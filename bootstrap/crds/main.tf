@@ -55,6 +55,10 @@ resource "kubernetes_manifest" "customresourcedefinition_blockfrostports_demeter
               "properties" = {
                 "spec" = {
                   "properties" = {
+                    "blockfrostVersion" = {
+                      "nullable" = true
+                      "type" = "string"
+                    }
                     "network" = {
                       "enum" = [
                         "mainnet",
