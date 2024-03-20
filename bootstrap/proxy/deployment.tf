@@ -31,14 +31,14 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
 
           resources {
             limits = {
-              cpu               = var.resources.limits.cpu
-              memory            = var.resources.limits.memory
-              ephemeral_storage = var.resources.limits.ephemeral_storage
+              cpu                 = var.resources.limits.cpu
+              memory              = var.resources.limits.memory
+              "ephemeral-storage" = var.resources.limits.ephemeral_storage
             }
             requests = {
-              cpu               = var.resources.requests.cpu
-              memory            = var.resources.requests.memory
-              ephemeral_storage = var.resources.requests.ephemeral_storage
+              cpu                 = var.resources.requests.cpu
+              memory              = var.resources.requests.memory
+              "ephemeral-storage" = var.resources.requests.ephemeral_storage
             }
           }
 
