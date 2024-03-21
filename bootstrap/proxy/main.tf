@@ -24,13 +24,13 @@ variable "proxy_image_tag" {
 variable "resources" {
   type = object({
     limits = object({
-      cpu    = string
-      memory = string
+      cpu               = string
+      memory            = string
       ephemeral_storage = string
     })
     requests = object({
-      cpu    = string
-      memory = string
+      cpu               = string
+      memory            = string
       ephemeral_storage = string
     })
   })
@@ -38,12 +38,12 @@ variable "resources" {
     limits : {
       cpu : "50m",
       memory : "250Mi"
-      ephemeral_storage: "4Gi"
+      ephemeral_storage : "4Gi"
     }
     requests : {
       cpu : "50m",
       memory : "250Mi"
-      ephemeral_storage: "4Gi"
+      ephemeral_storage : "4Gi"
     }
   }
 }
@@ -59,12 +59,12 @@ variable "extension_name" {
 }
 
 variable "networks" {
-  type = list(string)
+  type    = list(string)
   default = ["mainnet", "preprod", "preview"]
 }
 
 variable "versions" {
-  type = list(string)
+  type    = list(string)
   default = ["1"]
 }
 

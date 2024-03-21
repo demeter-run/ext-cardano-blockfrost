@@ -1,0 +1,12 @@
+FROM node:18 as builder
+
+WORKDIR /app
+
+RUN git clone https://github.com/blockfrost/blockfrost-backend-ryo.git .
+RUN git checkout tags/v1.7.0
+
+RUN yarn install
+RUN yarn run build
+
+EXPOSE 3000
+CMD ["yarn", "start"]
