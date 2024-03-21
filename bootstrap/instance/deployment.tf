@@ -21,6 +21,7 @@ resource "kubernetes_deployment_v1" "blockfrost" {
       match_labels = {
         "demeter.run/instance"        = local.name
         "cardano.demeter.run/network" = var.network
+        "demeter.run/kind"            = "blockfrost_instance"
       }
     }
 
@@ -30,6 +31,7 @@ resource "kubernetes_deployment_v1" "blockfrost" {
         labels = {
           "demeter.run/instance"        = local.name
           "cardano.demeter.run/network" = var.network
+          "demeter.run/kind"            = "blockfrost_instance"
         }
       }
 
@@ -143,14 +145,14 @@ resource "kubernetes_deployment_v1" "blockfrost" {
           effect   = "NoSchedule"
           key      = "demeter.run/compute-profile"
           operator = "Equal"
-          value    = "general-purpose"
+          value    = "mem-intensive"
         }
 
         toleration {
           effect   = "NoSchedule"
           key      = "demeter.run/compute-arch"
           operator = "Equal"
-          value    = "x86"
+          value    = "arm64"
         }
 
         toleration {
