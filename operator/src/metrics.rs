@@ -111,7 +111,7 @@ pub fn run_metrics_collector(state: Arc<State>) {
             last_execution = end;
 
             let query = format!(
-                "sum by (consumer, exported_instance) (increase(blockfrost_proxy_http_total_request[{start}s] @ {}))",
+                "sum by (consumer, exported_instance) (increase(blockfrost_proxy_http_total_request{{status_code!~\"401|429|503\"}}[{start}s] @ {}))",
                 end.timestamp_millis() / 1000
             );
 
