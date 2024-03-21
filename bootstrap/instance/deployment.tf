@@ -1,6 +1,6 @@
 locals {
   name  = "blockfrost-${var.network}-${var.salt}"
-  image = "ghcr.io/demeter-run/cardano-blockfrost:${var.image_tag}"
+  image = "ghcr.io/demeter-run/ext-cardano-blockfrost-instance:${var.image_tag}"
 }
 
 resource "kubernetes_deployment_v1" "blockfrost" {
@@ -89,6 +89,11 @@ resource "kubernetes_deployment_v1" "blockfrost" {
           env {
             name  = "BLOCKFROST_CONFIG_TOKEN_REGISTRY_URL"
             value = var.token_registry_url
+          }
+
+          env {
+            name  = "BLOCKFROST_CONFIG_SERVER_PROMETHEUS_METRICS"
+            value = "true"
           }
 
           env {

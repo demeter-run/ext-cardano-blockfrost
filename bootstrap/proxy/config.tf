@@ -38,7 +38,7 @@ resource "kubernetes_config_map" "proxy" {
   }
 
   data = {
-    "tiers.toml" = "${templatefile("${path.module}/proxy-config.toml.tftpl", { tiers = local.tiers })}"
+    "tiers.toml"       = "${templatefile("${path.module}/proxy-config.toml.tftpl", { tiers = local.tiers })}"
     "cache_rules.toml" = file("${path.module}/cache_rules.toml")
   }
 }

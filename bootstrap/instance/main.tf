@@ -48,7 +48,7 @@ variable "dbsync_host" {
 }
 
 variable "dbsync_database" {
-  type    = string
+  type = string
 }
 
 variable "dbsync_max_conn" {
