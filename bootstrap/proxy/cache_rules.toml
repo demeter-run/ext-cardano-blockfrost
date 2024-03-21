@@ -3,23 +3,23 @@
   duration_s = 20
 
 [[rules]]
-  endpoint = "/blocks/*"
+  endpoint = "/blocks/.*"
   duration_s = 120
 
 [[rules]]
-  endpoint = "/nutlink/*"
+  endpoint = "/nutlink/.*"
   duration_s = 20
 
 [[rules]]
-  endpoint = "/accounts/*"
+  endpoint = "/accounts/.*"
   duration_s = 20
 
 [[rules]]
-  endpoint = "/addresses/*"
+  endpoint = "/addresses/.*"
   duration_s = 20
 
 [[rules]]
-  endpoint = "/assets/*"
+  endpoint = "/assets.*"
   duration_s = 120
 
 [[rules]]
@@ -27,7 +27,7 @@
   duration_s = 20
 
 [[rules]]
-  endpoint = "/epochs/*"
+  endpoint = "/epochs.*"
   duration_s = 300
 
 [[rules]]
@@ -35,7 +35,7 @@
   duration_s = 3600
 
 [[rules]]
-  endpoint = "/txs/*"
+  endpoint = "/txs.*"
   duration_s = 300
 
 [[rules]]
@@ -43,5 +43,5 @@
   duration_s = 20
 
 [[rules]]
-  endpoint = "/scripts/*"
+  endpoint = "/scripts/.*"
   duration_s = 300
