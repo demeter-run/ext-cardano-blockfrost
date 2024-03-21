@@ -1,5 +1,6 @@
 use async_trait::async_trait;
-use pingora::http::ResponseHeader;
+use once_cell::sync::Lazy;
+use pingora::http::{RequestHeader, ResponseHeader};
 use pingora::Result;
 use pingora::{
     proxy::{ProxyHttp, Session},
@@ -7,6 +8,7 @@ use pingora::{
 };
 use pingora_cache::{CacheKey, CacheMeta, RespCacheable};
 use pingora_limits::rate::Rate;
+use prometheus::{register_int_counter_vec, IntCounterVec};
 use regex::Regex;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
@@ -17,6 +19,22 @@ use crate::config::Config;
 use crate::{Consumer, State, Tier};
 
 static DMTR_API_KEY: &str = "dmtr-api-key";
+static CACHE_HIT_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "blockfrost_proxy_http_cache_hits",
+        "Number of times cache was used.",
+        &["endpoint", "network", "project"]
+    )
+    .unwrap()
+});
+static CACHE_MISS_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "blockfrost_proxy_http_cache_miss",
+        "Number of times cache was requested, but no entry was found.",
+        &["endpoint", "network", "project"]
+    )
+    .unwrap()
+});
 
 pub struct BlockfrostProxy {
     state: Arc<State>,
@@ -113,6 +131,8 @@ pub struct Context {
     instance: String,
     consumer: Consumer,
     cache_rule: Option<CacheRule>,
+    network: String,
+    endpoint: String,
 }
 
 #[async_trait]
@@ -129,29 +149,28 @@ impl ProxyHttp for BlockfrostProxy {
         let state = self.state.clone();
 
         let (key, network) = self.extract_key_and_network(session);
-        let consumer = state.get_consumer(&network, &key).await;
-        if consumer.is_none() {
-            return Err(pingora::Error::new(pingora::ErrorType::HTTPStatus(401)));
-        }
-        let consumer = consumer.unwrap();
-
-        let instance = format!(
+        ctx.network = network.clone();
+        ctx.instance = format!(
             "blockfrost-{network}.{}:{}",
             self.config.blockfrost_dns, self.config.blockfrost_port
         );
 
-        if self.limiter(&consumer).await? {
+        let consumer = state.get_consumer(&network, &key).await;
+        if consumer.is_none() {
+            session.respond_error(401).await;
+            return Ok(true);
+        }
+
+        ctx.consumer = consumer.unwrap();
+        if self.limiter(&ctx.consumer).await? {
             session.respond_error(429).await;
             return Ok(true);
         }
 
         let path = session.req_header().uri.path();
         let cache_rule = self.get_rule(path).await;
-        *ctx = Context {
-            instance,
-            consumer,
-            cache_rule,
-        };
+        ctx.cache_rule = cache_rule;
+        ctx.endpoint = path.to_string().clone();
 
         Ok(false)
     }
@@ -228,5 +247,27 @@ impl ProxyHttp for BlockfrostProxy {
             0,
             resp.clone(),
         )))
+    }
+
+    async fn cache_hit_filter(
+        &self,
+        _meta: &CacheMeta,
+        ctx: &mut Self::CTX,
+        _req: &RequestHeader,
+    ) -> Result<bool>
+    where
+        Self::CTX: Send + Sync,
+    {
+        let _ = &CACHE_HIT_COUNTER
+            .with_label_values(&[&ctx.endpoint, &ctx.network, &ctx.consumer.namespace])
+            .inc();
+        Ok(false)
+    }
+
+    fn cache_miss(&self, session: &mut Session, ctx: &mut Self::CTX) {
+        let _ = &CACHE_MISS_COUNTER
+            .with_label_values(&[&ctx.endpoint, &ctx.network, &ctx.consumer.namespace])
+            .inc();
+        session.cache.cache_miss();
     }
 }

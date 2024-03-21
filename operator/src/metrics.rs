@@ -29,7 +29,7 @@ impl Default for Metrics {
 
         let reconcile_failures = IntCounterVec::new(
             opts!(
-                "crd_controller_reconciliation_errors_total",
+                "blockfrost_operator_crd_reconciliation_errors_total",
                 "reconciliation errors",
             ),
             &["instance", "error"],
@@ -38,7 +38,7 @@ impl Default for Metrics {
 
         let metrics_failures = IntCounterVec::new(
             opts!(
-                "metrics_controller_errors_total",
+                "blockfrost_operator_metrics_errors_total",
                 "errors to calculation metrics",
             ),
             &["error"],
@@ -111,7 +111,7 @@ pub fn run_metrics_collector(state: Arc<State>) {
             last_execution = end;
 
             let query = format!(
-                "sum by (consumer, exported_instance) (increase(blockfrost_proxy_http_total_request[{start}s] @ {}))",
+                "sum by (consumer, exported_instance) (increase(blockfrost_proxy_http_total_request{{status_code!~\"401|429|503\"}}[{start}s] @ {}))",
                 end.timestamp_millis() / 1000
             );
 
