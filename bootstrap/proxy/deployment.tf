@@ -109,6 +109,11 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
             value = "/cache/cache.redb"
           }
 
+          env {
+            name  = "FORBIDDEN_ENDPOINTS"
+            value = "/network,/pools/extended,/pools/\\\\w+$"
+          }
+
           volume_mount {
             mount_path = "/certs"
             name       = "certs"
