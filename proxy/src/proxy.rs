@@ -259,14 +259,22 @@ impl ProxyHttp for BlockfrostProxy {
         Self::CTX: Send + Sync,
     {
         let _ = &CACHE_HIT_COUNTER
-            .with_label_values(&[&ctx.endpoint, &ctx.network, &ctx.consumer.namespace])
+            .with_label_values(&[
+                &ctx.cache_rule.clone().unwrap().endpoint.to_string(),
+                &ctx.network,
+                &ctx.consumer.namespace,
+            ])
             .inc();
         Ok(false)
     }
 
     fn cache_miss(&self, session: &mut Session, ctx: &mut Self::CTX) {
         let _ = &CACHE_MISS_COUNTER
-            .with_label_values(&[&ctx.endpoint, &ctx.network, &ctx.consumer.namespace])
+            .with_label_values(&[
+                &ctx.cache_rule.clone().unwrap().endpoint.to_string(),
+                &ctx.network,
+                &ctx.consumer.namespace,
+            ])
             .inc();
         session.cache.cache_miss();
     }
