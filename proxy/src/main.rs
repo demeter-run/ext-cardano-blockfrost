@@ -87,10 +87,9 @@ pub struct State {
     cache_rules: RwLock<Vec<CacheRule>>,
 }
 impl State {
-    pub async fn get_consumer(&self, network: &str, key: &str) -> Option<Consumer> {
+    pub async fn get_consumer(&self, key: &str) -> Option<Consumer> {
         let consumers = self.consumers.read().await.clone();
-        let hash_key = format!("{}.{}", network, key);
-        consumers.get(&hash_key).cloned()
+        consumers.get(key).cloned()
     }
 
     pub fn get_cache() -> &'static ReDbCache {
@@ -104,14 +103,22 @@ pub struct Consumer {
     port_name: String,
     tier: String,
     key: String,
+    network: String,
 }
 impl Consumer {
-    pub fn new(namespace: String, port_name: String, tier: String, key: String) -> Self {
+    pub fn new(
+        namespace: String,
+        port_name: String,
+        tier: String,
+        key: String,
+        network: String,
+    ) -> Self {
         Self {
             namespace,
             port_name,
             key,
             tier,
+            network,
         }
     }
 }

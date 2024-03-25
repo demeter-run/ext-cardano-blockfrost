@@ -43,8 +43,7 @@ pub struct BlockfrostProxy {
 }
 impl BlockfrostProxy {
     pub fn new(state: Arc<State>, config: Arc<Config>) -> Self {
-        let host_regex =
-            Regex::new(r"(dmtr_[\w\d-]+)?\.?([\w]+)-([\w\d]+)\.blockfrost-([\w\d]+).+").unwrap();
+        let host_regex = Regex::new(r"(dmtr_[\w\d-]+)?\.?.+").unwrap();
 
         Self {
             state,
@@ -97,14 +96,13 @@ impl BlockfrostProxy {
         Ok(false)
     }
 
-    fn extract_key_and_network(&self, session: &Session) -> (String, String) {
+    fn extract_key(&self, session: &Session) -> String {
         let host = session
             .get_header("host")
             .map(|v| v.to_str().unwrap())
             .unwrap();
 
         let captures = self.host_regex.captures(host).unwrap();
-        let network = captures.get(2).unwrap().as_str().to_string();
         let mut key = session
             .get_header(DMTR_API_KEY)
             .map(|v| v.to_str().unwrap())
@@ -112,7 +110,7 @@ impl BlockfrostProxy {
         if let Some(m) = captures.get(1) {
             key = m.as_str();
         }
-        (key.to_string(), network)
+        key.to_string()
     }
 
     fn is_forbidden_endpoint(&self, path: &str) -> bool {
@@ -140,7 +138,6 @@ pub struct Context {
     instance: String,
     consumer: Consumer,
     cache_rule: Option<CacheRule>,
-    network: String,
     endpoint: String,
 }
 
@@ -163,20 +160,20 @@ impl ProxyHttp for BlockfrostProxy {
             return Ok(true);
         }
 
-        let (key, network) = self.extract_key_and_network(session);
-        ctx.network = network.clone();
-        ctx.instance = format!(
-            "blockfrost-{network}.{}:{}",
-            self.config.blockfrost_dns, self.config.blockfrost_port
-        );
-
-        let consumer = state.get_consumer(&network, &key).await;
+        let key = self.extract_key(session);
+        let consumer = state.get_consumer(&key).await;
         if consumer.is_none() {
             session.respond_error(401).await;
             return Ok(true);
         }
 
         ctx.consumer = consumer.unwrap();
+        ctx.instance = format!(
+            "blockfrost-{}.{}:{}",
+            ctx.consumer.network, self.config.blockfrost_dns, self.config.blockfrost_port
+        );
+        ctx.instance = "localhost:3000".to_string();
+
         if self.limiter(&ctx.consumer).await? {
             session.respond_error(429).await;
             return Ok(true);
@@ -224,11 +221,10 @@ impl ProxyHttp for BlockfrostProxy {
     // Cache related stuff
 
     /// Build cache key from the request.
-    fn cache_key_callback(&self, session: &Session, _ctx: &mut Self::CTX) -> Result<CacheKey> {
+    fn cache_key_callback(&self, session: &Session, ctx: &mut Self::CTX) -> Result<CacheKey> {
         let req_header = session.req_header();
-        let (_, network) = self.extract_key_and_network(session);
         Ok(CacheKey::new(
-            network,
+            ctx.consumer.network.clone(),
             req_header.uri.path(),
             "".to_string(),
         ))
@@ -273,14 +269,22 @@ impl ProxyHttp for BlockfrostProxy {
         Self::CTX: Send + Sync,
     {
         let _ = &CACHE_HIT_COUNTER
-            .with_label_values(&[&ctx.endpoint, &ctx.network, &ctx.consumer.namespace])
+            .with_label_values(&[
+                &ctx.cache_rule.clone().unwrap().endpoint.to_string(),
+                &ctx.consumer.network,
+                &ctx.consumer.namespace,
+            ])
             .inc();
         Ok(false)
     }
 
     fn cache_miss(&self, session: &mut Session, ctx: &mut Self::CTX) {
         let _ = &CACHE_MISS_COUNTER
-            .with_label_values(&[&ctx.endpoint, &ctx.network, &ctx.consumer.namespace])
+            .with_label_values(&[
+                &ctx.cache_rule.clone().unwrap().endpoint.to_string(),
+                &ctx.consumer.network,
+                &ctx.consumer.namespace,
+            ])
             .inc();
         session.cache.cache_miss();
     }
