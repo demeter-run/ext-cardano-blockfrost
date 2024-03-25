@@ -256,7 +256,7 @@ impl ProxyHttp for BlockfrostProxy {
     {
         let _ = &CACHE_HIT_COUNTER
             .with_label_values(&[
-                &ctx.endpoint,
+                &ctx.cache_rule.clone().unwrap().endpoint.to_string(),
                 &ctx.consumer.network,
                 &ctx.consumer.namespace,
             ])
@@ -267,7 +267,7 @@ impl ProxyHttp for BlockfrostProxy {
     fn cache_miss(&self, session: &mut Session, ctx: &mut Self::CTX) {
         let _ = &CACHE_MISS_COUNTER
             .with_label_values(&[
-                &ctx.endpoint,
+                &ctx.cache_rule.clone().unwrap().endpoint.to_string(),
                 &ctx.consumer.network,
                 &ctx.consumer.namespace,
             ])
