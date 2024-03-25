@@ -21,6 +21,7 @@ use tracing::Level;
 mod auth;
 mod cache_rules;
 mod config;
+mod forbidden_endpoints;
 mod proxy;
 mod redb_storage;
 mod tiers;

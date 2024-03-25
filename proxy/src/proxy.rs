@@ -113,6 +113,15 @@ impl BlockfrostProxy {
         key.to_string()
     }
 
+    fn is_forbidden_endpoint(&self, path: &str) -> bool {
+        for forbidden_endpoint in self.config.forbidden_endpoints.clone().into_iter() {
+            if forbidden_endpoint.matches(path) {
+                return true;
+            }
+        }
+        false
+    }
+
     async fn get_rule(&self, path: &str) -> Option<CacheRule> {
         let rules = self.state.cache_rules.read().await.clone();
         for rule in rules.into_iter() {
@@ -145,6 +154,12 @@ impl ProxyHttp for BlockfrostProxy {
     {
         let state = self.state.clone();
 
+        let path = session.req_header().uri.path();
+        if self.is_forbidden_endpoint(path) {
+            session.respond_error(501).await;
+            return Ok(true);
+        }
+
         let key = self.extract_key(session);
         let consumer = state.get_consumer(&key).await;
         if consumer.is_none() {
@@ -164,7 +179,6 @@ impl ProxyHttp for BlockfrostProxy {
             return Ok(true);
         }
 
-        let path = session.req_header().uri.path();
         let cache_rule = self.get_rule(path).await;
         ctx.cache_rule = cache_rule;
         ctx.endpoint = path.to_string().clone();
