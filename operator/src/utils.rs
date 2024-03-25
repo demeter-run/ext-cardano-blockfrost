@@ -37,15 +37,14 @@ pub fn build_hostname(key: &str) -> (String, String) {
     (hostname, hostname_key)
 }
 
-pub async fn build_api_key(
-    crd: &BlockfrostPort,
-    blockfrost_version: &Option<String>,
-) -> Result<String, Error> {
+pub async fn build_api_key(crd: &BlockfrostPort) -> Result<String, Error> {
     let config = get_config();
 
     let namespace = crd.namespace().unwrap();
     let network = &crd.spec.network;
-    let version = blockfrost_version
+    let version = crd
+        .spec
+        .blockfrost_version
         .clone()
         .unwrap_or(config.default_blockfrost_version.to_string());
 
