@@ -62,7 +62,7 @@ pub async fn build_api_key(crd: &BlockfrostPort) -> Result<String, Error> {
 
     let base64 = general_purpose::URL_SAFE_NO_PAD.encode(output);
     let with_bech = bech32::encode(
-        &format!("dmtr_blockfrost_{network}_{version}_"),
+        &format!("dmtr_blockfrost_{version}_{network}_"),
         base64.to_base32(),
         bech32::Variant::Bech32,
     )
