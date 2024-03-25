@@ -47,10 +47,9 @@ impl AuthBackgroundService {
                 let namespace = crd.metadata.namespace.as_ref().unwrap().clone();
                 let port_name = crd.name_any();
 
-                let hash_key = format!("{}.{}", network, key);
-                let consumer = Consumer::new(namespace, port_name, tier, key);
+                let consumer = Consumer::new(namespace, port_name, tier, key.clone(), network);
 
-                consumers.insert(hash_key, consumer);
+                consumers.insert(key, consumer);
             }
         }
 
