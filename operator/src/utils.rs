@@ -9,7 +9,7 @@ use kube::{
 };
 use serde_json::json;
 
-use crate::{get_config, BlockfrostPort, Error, Network};
+use crate::{get_config, BlockfrostPort, Error};
 
 pub async fn patch_resource_status(
     client: Client,
@@ -28,7 +28,7 @@ pub async fn patch_resource_status(
 }
 
 pub fn build_hostname(
-    network: &Network,
+    network: &str,
     key: &str,
     blockfrost_version: &Option<String>,
 ) -> (String, String) {
