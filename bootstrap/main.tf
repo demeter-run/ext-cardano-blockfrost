@@ -41,7 +41,6 @@ module "blockfrost_v1_proxy" {
   namespace       = var.namespace
   replicas        = var.proxy_replicas
   extension_name  = var.extension_name
-  networks        = var.networks
   dns_zone        = var.dns_zone
   proxy_image_tag = var.proxy_image_tag
   resources       = var.proxy_resources
