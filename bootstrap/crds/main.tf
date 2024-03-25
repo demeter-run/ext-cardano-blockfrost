@@ -60,12 +60,6 @@ resource "kubernetes_manifest" "customresourcedefinition_blockfrostports_demeter
                       "type"     = "string"
                     }
                     "network" = {
-                      "enum" = [
-                        "mainnet",
-                        "preprod",
-                        "preview",
-                        "sanchonet",
-                      ]
                       "type" = "string"
                     }
                     "operatorVersion" = {
