@@ -131,6 +131,15 @@ impl BlockfrostProxy {
         }
         None
     }
+
+    async fn respond_health(&self, session: &mut Session, ctx: &mut Context) {
+        ctx.is_health_request = true;
+        session.set_keepalive(None);
+        let _ = session.write_response_body("OK".into()).await;
+        let _ = session
+            .write_response_header(Box::new(ResponseHeader::build(200, None).unwrap()))
+            .await;
+    }
 }
 
 #[derive(Debug, Default)]
@@ -139,6 +148,7 @@ pub struct Context {
     consumer: Consumer,
     cache_rule: Option<CacheRule>,
     endpoint: String,
+    is_health_request: bool,
 }
 
 #[async_trait]
@@ -155,6 +165,12 @@ impl ProxyHttp for BlockfrostProxy {
         let state = self.state.clone();
 
         let path = session.req_header().uri.path();
+
+        if path == self.config.health_endpoint {
+            self.respond_health(session, ctx).await;
+            return Ok(true);
+        }
+
         if self.is_forbidden_endpoint(path) {
             session.respond_error(501).await;
             return Ok(true);
@@ -209,12 +225,14 @@ impl ProxyHttp for BlockfrostProxy {
             self.request_summary(session, ctx)
         );
 
-        self.state.metrics.inc_http_total_request(
-            &ctx.consumer,
-            &self.config.proxy_namespace,
-            &ctx.instance,
-            &response_code,
-        );
+        if !ctx.is_health_request {
+            self.state.metrics.inc_http_total_request(
+                &ctx.consumer,
+                &self.config.proxy_namespace,
+                &ctx.instance,
+                &response_code,
+            );
+        }
     }
 
     // Cache related stuff
