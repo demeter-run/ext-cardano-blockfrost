@@ -55,7 +55,7 @@ pub async fn build_api_key(crd: &BlockfrostPort) -> Result<String, Error> {
     let config = get_config();
     let salt = config.api_key_salt.as_bytes();
 
-    let mut output = vec![0; 16];
+    let mut output = vec![0; 8];
 
     let argon2 = Argon2::default();
     let _ = argon2.hash_password_into(password.as_slice(), salt, &mut output);
@@ -69,4 +69,54 @@ pub async fn build_api_key(crd: &BlockfrostPort) -> Result<String, Error> {
     .unwrap();
 
     Ok(with_bech)
+}
+
+#[cfg(test)]
+mod test {
+    use std::env;
+
+    use crate::BlockfrostPortSpec;
+
+    use super::*;
+
+    fn set_configs() {
+        env::set_var("DNS_ZONE", "dns_zone");
+        env::set_var("EXTENSION_SUBDOMAIN", "extension_subdomain");
+        env::set_var("API_KEY_SALT", "api_key_salt");
+        env::set_var("METRICS_DELAY", "100");
+        env::set_var("PROMETHEUS_URL", "prometheus_url");
+        env::set_var("DCU_PER_REQUEST", "preview=5,preprod=5,mainnet=5");
+        env::set_var("DEFAULT_BLOCKFROST_VERSION", "v1");
+    }
+
+    #[tokio::test]
+    async fn test_build_api_key() {
+        set_configs();
+        let mut crd = BlockfrostPort::new(
+            "namespace",
+            BlockfrostPortSpec {
+                operator_version: "1".to_string(),
+                network: "preview".to_string(),
+                throughput_tier: "0".to_string(),
+                blockfrost_version: Some("v1".to_string()),
+            },
+        );
+        crd.metadata.namespace = Some("namespace".to_string());
+
+        let api_key = build_api_key(&crd).await.unwrap();
+        assert!(api_key.starts_with("dmtr_blockfrost_v1_preview_"));
+        assert!(api_key.len() <= 63);
+    }
+    #[tokio::test]
+    async fn test_build_hostname() {
+        set_configs();
+        let key = "dmtr_blockfrost_v1_preview_ashjdcnoasdj";
+        let (hostname, hostname_key) = build_hostname(key);
+
+        assert_eq!(hostname, "extension_subdomain.dns_zone".to_string());
+        assert_eq!(
+            hostname_key,
+            "dmtr_blockfrost_v1_preview_ashjdcnoasdj.extension_subdomain.dns_zone".to_string()
+        );
+    }
 }
