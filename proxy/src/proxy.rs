@@ -135,10 +135,9 @@ impl BlockfrostProxy {
     async fn respond_health(&self, session: &mut Session, ctx: &mut Context) {
         ctx.is_health_request = true;
         session.set_keepalive(None);
-        let _ = session.write_response_body("OK".into()).await;
-        let _ = session
-            .write_response_header(Box::new(ResponseHeader::build(200, None).unwrap()))
-            .await;
+        session.write_response_body("OK".into()).await.unwrap();
+        let header = Box::new(ResponseHeader::build(200, None).unwrap());
+        session.write_response_header(header).await.unwrap();
     }
 }
 
