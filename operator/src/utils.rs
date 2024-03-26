@@ -93,7 +93,7 @@ mod test {
     async fn test_build_api_key() {
         set_configs();
         let mut crd = BlockfrostPort::new(
-            "namespace",
+            "",
             BlockfrostPortSpec {
                 operator_version: "1".to_string(),
                 network: "preview".to_string(),
