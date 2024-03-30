@@ -111,7 +111,7 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
 
           env {
             name  = "FORBIDDEN_ENDPOINTS"
-            value = "/network,/pools/extended,/pools/\\\\w+$"
+            value = "/network,/pools/extended,/pools/\\w+$"
           }
 
           volume_mount {
