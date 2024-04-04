@@ -38,8 +38,6 @@ impl TierBackgroundService {
 
         self.state.limiter.write().await.clear();
 
-        println!("Tiers updated;");
-
         Ok(())
     }
 }
