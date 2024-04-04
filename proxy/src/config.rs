@@ -20,6 +20,9 @@ pub struct Config {
 
     // Forbidden endpoints
     pub forbidden_endpoints: Vec<ForbiddenEndpoint>,
+
+    // Health endpoint
+    pub health_endpoint: String,
 }
 impl Config {
     pub fn new() -> Self {
@@ -56,6 +59,7 @@ impl Config {
                     ForbiddenEndpoint::new(endpoint).expect("Invalid forbidden endpoint regex")
                 })
                 .collect(),
+            health_endpoint: "/dmtr_health".to_string(),
         }
     }
 }

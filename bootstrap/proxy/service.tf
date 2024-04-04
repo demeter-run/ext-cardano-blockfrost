@@ -6,8 +6,8 @@ resource "kubernetes_service_v1" "proxy_service" {
       "service.beta.kubernetes.io/aws-load-balancer-nlb-target-type" : "instance"
       "service.beta.kubernetes.io/aws-load-balancer-scheme" : "internet-facing"
       "service.beta.kubernetes.io/aws-load-balancer-type" : "external"
-      # "service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol" : "HTTPS"
-      # "service.beta.kubernetes.io/aws-load-balancer-healthcheck-path" : "/healthz"
+      "service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol" : "HTTPS"
+      "service.beta.kubernetes.io/aws-load-balancer-healthcheck-path" : "/dmtr_health"
     }
   }
 
