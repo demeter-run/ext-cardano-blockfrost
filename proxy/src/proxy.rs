@@ -215,16 +215,16 @@ impl ProxyHttp for BlockfrostProxy {
         _e: Option<&pingora::Error>,
         ctx: &mut Self::CTX,
     ) {
-        let response_code = session
-            .response_written()
-            .map_or(0, |resp| resp.status.as_u16());
-
-        info!(
-            "{} response code: {response_code}",
-            self.request_summary(session, ctx)
-        );
-
         if !ctx.is_health_request {
+            let response_code = session
+                .response_written()
+                .map_or(0, |resp| resp.status.as_u16());
+
+            info!(
+                "{} response code: {response_code}",
+                self.request_summary(session, ctx)
+            );
+
             self.state.metrics.inc_http_total_request(
                 &ctx.consumer,
                 &self.config.proxy_namespace,
