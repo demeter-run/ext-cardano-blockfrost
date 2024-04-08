@@ -354,7 +354,3 @@ class ScriptUser(HttpUser):
             verify=False,
             name=endpoint,
         )
-
-
-if __name__ == "__main__":
-    host = "lockfrost-m1.demeter.run"
