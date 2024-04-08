@@ -241,7 +241,11 @@ impl ProxyHttp for BlockfrostProxy {
         let req_header = session.req_header();
         Ok(CacheKey::new(
             ctx.consumer.network.clone(),
-            req_header.uri.path(),
+            format!(
+                "{}{}",
+                req_header.uri.path(),
+                req_header.uri.query().unwrap_or("")
+            ),
             "".to_string(),
         ))
     }
