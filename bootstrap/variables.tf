@@ -46,6 +46,29 @@ variable "dcu_per_request" {
   }
 }
 
+variable "operator_resources" {
+  type = object({
+    limits = object({
+      cpu    = string
+      memory = string
+    })
+    requests = object({
+      cpu    = string
+      memory = string
+    })
+  })
+  default = {
+    limits = {
+      cpu    = "50m"
+      memory = "512Mi"
+    }
+    requests = {
+      cpu    = "50m"
+      memory = "512Mi"
+    }
+  }
+}
+
 variable "metrics_delay" {
   type    = number
   default = 60

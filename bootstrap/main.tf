@@ -33,6 +33,7 @@ module "blockfrost_v1_feature" {
   dns_zone            = var.dns_zone
   api_key_salt        = var.api_key_salt
   dcu_per_request     = var.dcu_per_request
+  resources           = var.operator_resources
 }
 
 module "blockfrost_v1_proxy" {
