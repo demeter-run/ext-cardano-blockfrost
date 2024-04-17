@@ -38,11 +38,6 @@ variable "server_debug" {
   default = false
 }
 
-variable "server_prometheus_metrics" {
-  type    = bool
-  default = true
-}
-
 variable "dbsync_host" {
   type = string
 }
