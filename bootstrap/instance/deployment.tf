@@ -64,11 +64,6 @@ resource "kubernetes_deployment_v1" "blockfrost" {
           }
 
           env {
-            name  = "BLOCKFROST_CONFIG_SERVER_PROMETHEUS_METRICS"
-            value = var.server_prometheus_metrics
-          }
-
-          env {
             name  = "BLOCKFROST_CONFIG_DBSYNC_HOST"
             value = var.dbsync_host
           }
@@ -91,11 +86,6 @@ resource "kubernetes_deployment_v1" "blockfrost" {
           env {
             name  = "BLOCKFROST_CONFIG_TOKEN_REGISTRY_URL"
             value = var.token_registry_url
-          }
-
-          env {
-            name  = "BLOCKFROST_CONFIG_SERVER_PROMETHEUS_METRICS"
-            value = "true"
           }
 
           env {
