@@ -99,7 +99,6 @@ pub fn run_metrics_collector(state: Arc<State>) {
         let config = get_config();
         let client = reqwest::Client::builder().build().unwrap();
         let project_regex = Regex::new(r"prj-(.+)\..+").unwrap();
-        let network_regex = Regex::new(r"blockfrost-([\w]+)-.+").unwrap();
         let mut last_execution = Utc::now();
 
         loop {
@@ -111,7 +110,7 @@ pub fn run_metrics_collector(state: Arc<State>) {
             last_execution = end;
 
             let query = format!(
-                "sum by (consumer, exported_instance) (increase(blockfrost_proxy_http_total_request{{status_code!~\"401|429|503\"}}[{start}s] @ {}))",
+                "sum by (consumer, network) (increase(blockfrost_proxy_http_total_request{{status_code!~\"401|429|503\"}}[{start}s] @ {}))",
                 end.timestamp_millis() / 1000
             );
 
@@ -143,7 +142,7 @@ pub fn run_metrics_collector(state: Arc<State>) {
             for result in response.data.result {
                 if result.value == 0.0
                     || result.metric.consumer.is_none()
-                    || result.metric.exported_instance.is_none()
+                    || result.metric.network.is_none()
                 {
                     continue;
                 }
@@ -156,15 +155,9 @@ pub fn run_metrics_collector(state: Arc<State>) {
                 let project_captures = project_captures.unwrap();
                 let project = project_captures.get(1).unwrap().as_str();
 
-                let instance = result.metric.exported_instance.unwrap();
-                let network_captures = network_regex.captures(&instance);
-                if network_captures.is_none() {
-                    continue;
-                }
-                let network_captures = network_captures.unwrap();
-                let network = network_captures.get(1).unwrap().as_str();
+                let network = result.metric.network.unwrap();
 
-                let dcu_per_request = config.dcu_per_request.get(network);
+                let dcu_per_request = config.dcu_per_request.get(&network);
                 if dcu_per_request.is_none() {
                     let error = Error::ConfigError(format!(
                         "dcu_per_request not configured to {} network",
@@ -177,7 +170,7 @@ pub fn run_metrics_collector(state: Arc<State>) {
                 let dcu_per_request = dcu_per_request.unwrap();
 
                 let dcu = result.value * dcu_per_request;
-                state.metrics.count_dcu_consumed(project, network, dcu);
+                state.metrics.count_dcu_consumed(project, &network, dcu);
             }
         }
     });
@@ -250,7 +243,7 @@ async fn api_get_metrics(
 #[derive(Debug, Deserialize)]
 struct PrometheusDataResultMetric {
     consumer: Option<String>,
-    exported_instance: Option<String>,
+    network: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
