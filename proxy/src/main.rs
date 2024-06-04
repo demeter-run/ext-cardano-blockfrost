@@ -182,6 +182,7 @@ impl Metrics {
                 "instance",
                 "status_code",
                 "network",
+                "resource_name",
                 "tier"
             ]
         )
@@ -204,6 +205,7 @@ impl Metrics {
                 instance,
                 &status.to_string(),
                 &consumer.network,
+                &consumer.port_name,
                 &consumer.tier,
             ])
             .inc()

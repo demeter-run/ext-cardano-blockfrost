@@ -28,7 +28,7 @@ impl Default for Metrics {
                 "service",
                 "service_type",
                 "tenancy",
-                "instance",
+                "resource_name",
                 "tier",
             ],
         )
@@ -85,7 +85,7 @@ impl Metrics {
         &self,
         project: &str,
         network: &str,
-        instance: &str,
+        resource_name: &str,
         tier: &str,
         dcu: f64,
     ) {
@@ -100,7 +100,14 @@ impl Metrics {
         let dcu: u64 = dcu.ceil() as u64;
 
         self.dcu
-            .with_label_values(&[project, &service, &service_type, tenancy, instance, tier])
+            .with_label_values(&[
+                project,
+                &service,
+                &service_type,
+                tenancy,
+                resource_name,
+                tier,
+            ])
             .inc_by(dcu);
     }
 }
@@ -124,7 +131,7 @@ pub fn run_metrics_collector(state: Arc<State>) {
             last_execution = end;
 
             let query = format!(
-                "sum by (consumer, network, instance, tier) (increase(blockfrost_proxy_http_total_request{{status_code!~\"401|429|503\"}}[{start}s] @ {}))",
+                "sum by (consumer, network, resource_name, tier) (increase(blockfrost_proxy_http_total_request{{status_code!~\"401|429|503\"}}[{start}s] @ {}))",
                 end.timestamp_millis() / 1000
             );
 
@@ -157,7 +164,7 @@ pub fn run_metrics_collector(state: Arc<State>) {
                 if result.value == 0.0
                     || result.metric.consumer.is_none()
                     || result.metric.network.is_none()
-                    || result.metric.instance.is_none()
+                    || result.metric.resource_name.is_none()
                     || result.metric.tier.is_none()
                 {
                     continue;
@@ -172,7 +179,7 @@ pub fn run_metrics_collector(state: Arc<State>) {
                 let project = project_captures.get(1).unwrap().as_str();
 
                 let network = result.metric.network.unwrap();
-                let instance = result.metric.instance.unwrap();
+                let resource_name = result.metric.resource_name.unwrap();
                 let tier = result.metric.tier.unwrap();
 
                 let dcu_per_request = config.dcu_per_request.get(&network);
@@ -190,7 +197,7 @@ pub fn run_metrics_collector(state: Arc<State>) {
                 let dcu = result.value * dcu_per_request;
                 state
                     .metrics
-                    .count_dcu_consumed(project, &network, &instance, &tier, dcu);
+                    .count_dcu_consumed(project, &network, &resource_name, &tier, dcu);
             }
         }
     });
@@ -264,7 +271,7 @@ async fn api_get_metrics(
 struct PrometheusDataResultMetric {
     consumer: Option<String>,
     network: Option<String>,
-    instance: Option<String>,
+    resource_name: Option<String>,
     tier: Option<String>,
 }
 
