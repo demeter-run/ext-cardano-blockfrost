@@ -23,7 +23,14 @@ impl Default for Metrics {
     fn default() -> Self {
         let dcu = IntCounterVec::new(
             opts!("dmtr_consumed_dcus", "quantity of dcu consumed",),
-            &["project", "service", "service_type", "tenancy"],
+            &[
+                "project",
+                "service",
+                "service_type",
+                "tenancy",
+                "instance",
+                "tier",
+            ],
         )
         .unwrap();
 
@@ -74,7 +81,14 @@ impl Metrics {
             .inc()
     }
 
-    pub fn count_dcu_consumed(&self, project: &str, network: &str, dcu: f64) {
+    pub fn count_dcu_consumed(
+        &self,
+        project: &str,
+        network: &str,
+        instance: &str,
+        tier: &str,
+        dcu: f64,
+    ) {
         let service = format!("{}-{}", BlockfrostPort::kind(&()), network);
         let service_type = format!(
             "{}.{}",
@@ -86,7 +100,7 @@ impl Metrics {
         let dcu: u64 = dcu.ceil() as u64;
 
         self.dcu
-            .with_label_values(&[project, &service, &service_type, tenancy])
+            .with_label_values(&[project, &service, &service_type, tenancy, instance, tier])
             .inc_by(dcu);
     }
 }
@@ -110,7 +124,7 @@ pub fn run_metrics_collector(state: Arc<State>) {
             last_execution = end;
 
             let query = format!(
-                "sum by (consumer, network) (increase(blockfrost_proxy_http_total_request{{status_code!~\"401|429|503\"}}[{start}s] @ {}))",
+                "sum by (consumer, network, instance, network) (increase(blockfrost_proxy_http_total_request{{status_code!~\"401|429|503\"}}[{start}s] @ {}))",
                 end.timestamp_millis() / 1000
             );
 
@@ -143,6 +157,8 @@ pub fn run_metrics_collector(state: Arc<State>) {
                 if result.value == 0.0
                     || result.metric.consumer.is_none()
                     || result.metric.network.is_none()
+                    || result.metric.instance.is_none()
+                    || result.metric.tier.is_none()
                 {
                     continue;
                 }
@@ -156,6 +172,8 @@ pub fn run_metrics_collector(state: Arc<State>) {
                 let project = project_captures.get(1).unwrap().as_str();
 
                 let network = result.metric.network.unwrap();
+                let instance = result.metric.instance.unwrap();
+                let tier = result.metric.tier.unwrap();
 
                 let dcu_per_request = config.dcu_per_request.get(&network);
                 if dcu_per_request.is_none() {
@@ -170,7 +188,9 @@ pub fn run_metrics_collector(state: Arc<State>) {
                 let dcu_per_request = dcu_per_request.unwrap();
 
                 let dcu = result.value * dcu_per_request;
-                state.metrics.count_dcu_consumed(project, &network, dcu);
+                state
+                    .metrics
+                    .count_dcu_consumed(project, &network, &instance, &tier, dcu);
             }
         }
     });
@@ -244,6 +264,8 @@ async fn api_get_metrics(
 struct PrometheusDataResultMetric {
     consumer: Option<String>,
     network: Option<String>,
+    instance: Option<String>,
+    tier: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
