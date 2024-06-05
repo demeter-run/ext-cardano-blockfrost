@@ -66,6 +66,7 @@ impl Metrics {
         registry.register(Box::new(self.reconcile_failures.clone()))?;
         registry.register(Box::new(self.metrics_failures.clone()))?;
         registry.register(Box::new(self.dcu.clone()))?;
+        registry.register(Box::new(self.usage.clone()))?;
 
         Ok(self)
     }
