@@ -181,7 +181,8 @@ impl Metrics {
                 "namespace",
                 "instance",
                 "status_code",
-                "network"
+                "network",
+                "tier"
             ]
         )
         .unwrap();
@@ -203,6 +204,7 @@ impl Metrics {
                 instance,
                 &status.to_string(),
                 &consumer.network,
+                &consumer.tier,
             ])
             .inc()
     }
