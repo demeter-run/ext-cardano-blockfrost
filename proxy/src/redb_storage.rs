@@ -48,7 +48,7 @@ pub struct ReDbHitHandler {
 #[derive(Copy, Clone)]
 enum PartialState {
     Partial(usize),
-    Complete(usize),
+    Complete,
 }
 
 impl ReDbHitHandler {
@@ -123,12 +123,12 @@ impl HandleMiss for ReDbMissHandler {
     async fn write_body(&mut self, data: bytes::Bytes, eof: bool) -> Result<()> {
         let current_bytes = match *self.bytes_written.borrow() {
             PartialState::Partial(p) => p,
-            PartialState::Complete(_) => panic!("already EOF"),
+            PartialState::Complete => panic!("already EOF"),
         };
         self.body.write().extend_from_slice(&data);
         let written = current_bytes + data.len();
         let new_state = if eof {
-            PartialState::Complete(written)
+            PartialState::Complete
         } else {
             PartialState::Partial(written)
         };
