@@ -159,6 +159,7 @@ pub fn run_metrics_collector(state: Arc<State>) {
                 if result.value == 0.0
                     || result.metric.consumer.is_none()
                     || result.metric.network.is_none()
+                    || result.metric.tier.is_none()
                 {
                     continue;
                 }
