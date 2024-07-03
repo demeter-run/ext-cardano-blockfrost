@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 use once_cell::sync::Lazy;
-use pingora::http::{RequestHeader, ResponseHeader};
+use pingora::http::{RequestHeader, ResponseHeader, StatusCode};
 use pingora::Result;
 use pingora::{
     proxy::{ProxyHttp, Session},
     upstreams::peer::HttpPeer,
 };
-use pingora_cache::{CacheKey, CacheMeta, RespCacheable};
+use pingora_cache::{CacheKey, CacheMeta, NoCacheReason, RespCacheable};
 use pingora_limits::rate::Rate;
 use prometheus::{register_int_counter_vec, IntCounterVec};
 use regex::Regex;
@@ -268,15 +268,20 @@ impl ProxyHttp for BlockfrostProxy {
             .clone()
             .expect("Cache rule unexpectedly None.");
 
-        Ok(RespCacheable::Cacheable(CacheMeta::new(
-            SystemTime::now()
-                .checked_add(Duration::new(rule.duration_s, 0))
-                .unwrap(),
-            SystemTime::now(),
-            0,
-            0,
-            resp.clone(),
-        )))
+        match resp.status {
+            StatusCode::OK => Ok(RespCacheable::Cacheable(CacheMeta::new(
+                SystemTime::now()
+                    .checked_add(Duration::new(rule.duration_s, 0))
+                    .unwrap(),
+                SystemTime::now(),
+                0,
+                0,
+                resp.clone(),
+            ))),
+            _ => Ok(RespCacheable::Uncacheable(NoCacheReason::Custom(
+                "Only cache 200 responses.",
+            ))),
+        }
     }
 
     async fn cache_hit_filter(
