@@ -17,6 +17,7 @@ pub struct Config {
     // Cache settings
     pub cache_rules_path: PathBuf,
     pub cache_db_path: String,
+    pub cache_failed_requests_seconds: u64,
 
     // Forbidden endpoints
     pub forbidden_endpoints: Vec<ForbiddenEndpoint>,
@@ -52,6 +53,10 @@ impl Config {
                 .map(|v| v.into())
                 .expect("CACHE_RULES_PATH must be set"),
             cache_db_path: env::var("CACHE_DB_PATH").expect("CACHE_DB_PATH must be set"),
+            cache_failed_requests_seconds: env::var("CACHE_FAILED_REQUESTS_SECONDS")
+                .unwrap_or("20".to_string())
+                .parse()
+                .expect("CACHE_FAILED_REQUESTS_SECONDS must a number"),
             forbidden_endpoints: env::var("FORBIDDEN_ENDPOINTS")
                 .unwrap_or("".into())
                 .split(',')
