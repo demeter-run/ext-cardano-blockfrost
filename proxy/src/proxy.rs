@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use once_cell::sync::Lazy;
-use pingora::http::{RequestHeader, ResponseHeader};
+use pingora::http::{RequestHeader, ResponseHeader, StatusCode};
 use pingora::Result;
 use pingora::{
     proxy::{ProxyHttp, Session},
@@ -268,9 +268,14 @@ impl ProxyHttp for BlockfrostProxy {
             .clone()
             .expect("Cache rule unexpectedly None.");
 
+        let cache_seconds = match resp.status {
+            StatusCode::OK => rule.duration_s,
+            _ => self.config.cache_failed_requests_seconds,
+        };
+
         Ok(RespCacheable::Cacheable(CacheMeta::new(
             SystemTime::now()
-                .checked_add(Duration::new(rule.duration_s, 0))
+                .checked_add(Duration::new(cache_seconds, 0))
                 .unwrap(),
             SystemTime::now(),
             0,
