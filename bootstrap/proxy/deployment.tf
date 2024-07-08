@@ -16,6 +16,12 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
         role = local.role
       }
     }
+    strategy {
+      rolling_update {
+        max_surge       = 2
+        max_unavailable = 0
+      }
+    }
     template {
       metadata {
         name = local.name

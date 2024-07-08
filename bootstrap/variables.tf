@@ -107,12 +107,12 @@ variable "proxy_resources" {
   })
   default = {
     limits : {
-      cpu : "50m",
+      cpu : "4",
       memory : "250Mi"
       ephemeral_storage : "4Gi"
     }
     requests : {
-      cpu : "50m",
+      cpu : "100m",
       memory : "250Mi"
       ephemeral_storage : "4Gi"
     }
