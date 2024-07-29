@@ -45,6 +45,7 @@ pub struct BlockfrostPortSpec {
     pub network: String,
     pub throughput_tier: String,
     pub blockfrost_version: Option<String>,
+    pub auth_token: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Default, Debug, JsonSchema)]
