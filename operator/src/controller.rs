@@ -57,7 +57,10 @@ pub struct BlockfrostPortStatus {
 }
 
 async fn reconcile(crd: Arc<BlockfrostPort>, ctx: Arc<Context>) -> Result<Action> {
-    let key = build_api_key(&crd).await?;
+    let key = match &crd.spec.auth_token {
+        Some(key) => key.clone(),
+        None => build_api_key(&crd).await?,
+    };
     let (hostname, hostname_key) = build_hostname(&key);
 
     let status = BlockfrostPortStatus {
