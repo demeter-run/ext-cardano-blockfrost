@@ -4,11 +4,6 @@ variable "namespace" {
 
 variable "network" {
   type = string
-
-  validation {
-    condition     = contains(["mainnet", "preprod", "preview"], var.network)
-    error_message = "Invalid network. Allowed values are mainnet, preprod and preview."
-  }
 }
 
 variable "salt" {
@@ -17,6 +12,10 @@ variable "salt" {
 
 variable "dbsync_secret_name" {
   type = string
+}
+
+variable "image" {
+  default = "ghcr.io/demeter-run/ext-cardano-blockfrost-instance"
 }
 
 variable "image_tag" {

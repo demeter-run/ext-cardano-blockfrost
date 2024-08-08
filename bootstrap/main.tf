@@ -56,6 +56,7 @@ module "blockfrost_instances" {
   network            = each.value.network
   salt               = each.value.salt
   dbsync_secret_name = local.postgres_secret_name
+  image              = coalesce(each.value.image, "ghcr.io/demeter-run/ext-cardano-blockfrost-instance")
   image_tag          = each.value.image_tag
   dbsync_host        = each.value.dbsync_host
   dbsync_database    = each.value.dbsync_database
