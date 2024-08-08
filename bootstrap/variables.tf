@@ -121,6 +121,7 @@ variable "proxy_resources" {
 
 variable "instances" {
   type = map(object({
+    image           = optional(string)
     image_tag       = string
     network         = string
     salt            = string

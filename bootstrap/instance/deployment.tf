@@ -1,6 +1,6 @@
 locals {
   name  = "blockfrost-${var.network}-${var.salt}"
-  image = "ghcr.io/demeter-run/ext-cardano-blockfrost-instance:${var.image_tag}"
+  image = "${var.image}:${var.image_tag}"
 }
 
 resource "kubernetes_deployment_v1" "blockfrost" {
