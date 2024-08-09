@@ -45,6 +45,7 @@ pub struct BlockfrostPortSpec {
     pub network: String,
     pub throughput_tier: String,
     pub blockfrost_version: Option<String>,
+    pub auth_token: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Default, Debug, JsonSchema)]
@@ -56,7 +57,10 @@ pub struct BlockfrostPortStatus {
 }
 
 async fn reconcile(crd: Arc<BlockfrostPort>, ctx: Arc<Context>) -> Result<Action> {
-    let key = build_api_key(&crd).await?;
+    let key = match &crd.spec.auth_token {
+        Some(key) => key.clone(),
+        None => build_api_key(&crd).await?,
+    };
     let (hostname, hostname_key) = build_hostname(&key);
 
     let status = BlockfrostPortStatus {

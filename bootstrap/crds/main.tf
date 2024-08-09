@@ -1,7 +1,7 @@
 resource "kubernetes_manifest" "customresourcedefinition_blockfrostports_demeter_run" {
   manifest = {
     "apiVersion" = "apiextensions.k8s.io/v1"
-    "kind"       = "CustomResourceDefinition"
+    "kind" = "CustomResourceDefinition"
     "metadata" = {
       "name" = "blockfrostports.demeter.run"
     }
@@ -11,7 +11,7 @@ resource "kubernetes_manifest" "customresourcedefinition_blockfrostports_demeter
         "categories" = [
           "demeter-port",
         ]
-        "kind"   = "BlockfrostPort"
+        "kind" = "BlockfrostPort"
         "plural" = "blockfrostports"
         "shortNames" = [
           "bfpts",
@@ -24,28 +24,28 @@ resource "kubernetes_manifest" "customresourcedefinition_blockfrostports_demeter
           "additionalPrinterColumns" = [
             {
               "jsonPath" = ".spec.network"
-              "name"     = "Network"
-              "type"     = "string"
+              "name" = "Network"
+              "type" = "string"
             },
             {
               "jsonPath" = ".spec.throughputTier"
-              "name"     = "Throughput Tier"
-              "type"     = "string"
+              "name" = "Throughput Tier"
+              "type" = "string"
             },
             {
               "jsonPath" = ".status.endpointUrl"
-              "name"     = "Endpoint URL"
-              "type"     = "string"
+              "name" = "Endpoint URL"
+              "type" = "string"
             },
             {
               "jsonPath" = ".status.authenticatedEndpointUrl"
-              "name"     = "Authenticated Endpoint URL"
-              "type"     = "string"
+              "name" = "Authenticated Endpoint URL"
+              "type" = "string"
             },
             {
               "jsonPath" = ".status.authToken"
-              "name"     = "Auth Token"
-              "type"     = "string"
+              "name" = "Auth Token"
+              "type" = "string"
             },
           ]
           "name" = "v1alpha1"
@@ -55,9 +55,13 @@ resource "kubernetes_manifest" "customresourcedefinition_blockfrostports_demeter
               "properties" = {
                 "spec" = {
                   "properties" = {
+                    "authToken" = {
+                      "nullable" = true
+                      "type" = "string"
+                    }
                     "blockfrostVersion" = {
                       "nullable" = true
-                      "type"     = "string"
+                      "type" = "string"
                     }
                     "network" = {
                       "type" = "string"
@@ -84,7 +88,7 @@ resource "kubernetes_manifest" "customresourcedefinition_blockfrostports_demeter
                     }
                     "authenticatedEndpointUrl" = {
                       "nullable" = true
-                      "type"     = "string"
+                      "type" = "string"
                     }
                     "endpointUrl" = {
                       "type" = "string"
@@ -101,10 +105,10 @@ resource "kubernetes_manifest" "customresourcedefinition_blockfrostports_demeter
                 "spec",
               ]
               "title" = "BlockfrostPort"
-              "type"  = "object"
+              "type" = "object"
             }
           }
-          "served"  = true
+          "served" = true
           "storage" = true
           "subresources" = {
             "status" = {}
