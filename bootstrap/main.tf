@@ -71,6 +71,27 @@ module "blockfrost_instances" {
       memory : "400Mi"
     }
   })
+  tolerations = coalesce(each.value.tolerations, [
+    {
+      effect   = "NoSchedule"
+      key      = "demeter.run/compute-profile"
+      operator = "Equal"
+      value    = "mem-intensive"
+    },
+    {
+      effect   = "NoSchedule"
+      key      = "demeter.run/compute-arch"
+      operator = "Equal"
+      value    = "arm64"
+    },
+    {
+      effect   = "NoSchedule"
+      key      = "demeter.run/availability-sla"
+      operator = "Equal"
+      value    = "consistent"
+    }
+
+  ])
 }
 
 module "blockfrost_services" {
