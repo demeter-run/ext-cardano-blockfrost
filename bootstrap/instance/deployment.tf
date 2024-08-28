@@ -80,7 +80,7 @@ resource "kubernetes_deployment_v1" "blockfrost" {
 
           env {
             name  = "BLOCKFROST_CONFIG_NETWORK"
-            value = var.network
+            value = coalesce(var.network_argument, var.network)
           }
 
           env {

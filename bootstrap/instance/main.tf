@@ -55,6 +55,11 @@ variable "token_registry_url" {
   default = "https://tokens.cardano.org"
 }
 
+variable "network_argument" {
+  type    = string
+  default = null
+}
+
 variable "resources" {
   type = object({
     limits = object({
