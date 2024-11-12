@@ -8,6 +8,7 @@ on:
     paths:
       - ".github/workflows/proxy.yml"
       - "proxy/**"
+      - "operator/**"
 
 jobs:
   build-images:
