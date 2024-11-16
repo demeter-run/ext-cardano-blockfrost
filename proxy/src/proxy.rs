@@ -103,13 +103,13 @@ impl BlockfrostProxy {
             .unwrap();
 
         let captures = self.host_regex.captures(host).unwrap();
-        let mut key = session
+
+        let key = session
             .get_header(DMTR_API_KEY)
-            .map(|v| v.to_str().unwrap())
+            .and_then(|v| v.to_str().ok())
+            .or_else(|| captures.get(1).map(|v| v.as_str()))
             .unwrap_or_default();
-        if let Some(m) = captures.get(1) {
-            key = m.as_str();
-        }
+
         key.to_string()
     }
 
@@ -195,7 +195,7 @@ impl ProxyHttp for BlockfrostProxy {
 
         let cache_rule = self.get_rule(path).await;
         ctx.cache_rule = cache_rule;
-        ctx.endpoint = path.to_string().clone();
+        ctx.endpoint = path.to_string();
 
         Ok(false)
     }
