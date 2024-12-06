@@ -83,11 +83,20 @@ variable "dbsync_creds" {
 }
 
 // Proxy
-variable "proxy_image_tag" {
+variable "proxy_green_image_tag" {
   type = string
 }
 
-variable "proxy_replicas" {
+variable "proxy_green_replicas" {
+  type    = number
+  default = 1
+}
+
+variable "proxy_blue_image_tag" {
+  type = string
+}
+
+variable "proxy_blue_replicas" {
   type    = number
   default = 1
 }
