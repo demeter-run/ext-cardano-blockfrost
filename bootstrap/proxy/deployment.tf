@@ -5,16 +5,12 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
   metadata {
     name      = local.name
     namespace = var.namespace
-    labels = {
-      role = local.role
-    }
+    labels    = local.proxy_labels
   }
   spec {
     replicas = var.replicas
     selector {
-      match_labels = {
-        role = local.role
-      }
+      match_labels = local.proxy_labels
     }
     strategy {
       rolling_update {
@@ -24,10 +20,8 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
     }
     template {
       metadata {
-        name = local.name
-        labels = {
-          role = local.role
-        }
+        name   = local.name
+        labels = local.proxy_labels
       }
       spec {
         container {

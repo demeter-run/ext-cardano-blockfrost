@@ -29,7 +29,7 @@ locals {
     },
     {
       "name" = "2",
-      "rates" =[
+      "rates" = [
         {
           "interval" = "1m",
           "limit"    = floor(100 * 60 / var.replicas)
@@ -38,11 +38,11 @@ locals {
           "interval" = "1d",
           "limit"    = floor(8600000 / var.replicas)
         }
-      ] 
+      ]
     },
     {
       "name" = "3",
-      "rates" =[
+      "rates" = [
         {
           "interval" = "1m",
           "limit"    = floor(300 * 60 / var.replicas)
@@ -51,15 +51,17 @@ locals {
           "interval" = "1d",
           "limit"    = floor(26000000 / var.replicas)
         }
-      ] 
+      ]
     }
   ]
+
+  configmap_name = var.environment != null ? "proxy-${var.environment}-config" : "proxy-config"
 }
 
 resource "kubernetes_config_map" "proxy" {
   metadata {
     namespace = var.namespace
-    name      = "proxy-config"
+    name      = local.configmap_name
   }
 
   data = {
