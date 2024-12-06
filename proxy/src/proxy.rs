@@ -139,6 +139,33 @@ impl BlockfrostProxy {
         let header = Box::new(ResponseHeader::build(200, None).unwrap());
         session.write_response_header(header).await.unwrap();
     }
+
+    async fn respond_with_static_params(&self, session: &mut Session, ctx: &mut Context) {
+        let body = include_str!("params.json");
+
+        let mut header = ResponseHeader::build(200, None).unwrap();
+
+        header
+            .insert_header("access-control-allow-origin", "*")
+            .unwrap();
+
+        header
+            .insert_header("content-type", "application/json; charset=utf-8")
+            .unwrap();
+
+        header
+            .insert_header("content-length", body.len().to_string())
+            .unwrap();
+
+        session
+            .write_response_header(Box::new(header))
+            .await
+            .unwrap();
+
+        session.write_response_body(body.into()).await.unwrap();
+
+        session.finish_body().await.unwrap();
+    }
 }
 
 #[derive(Debug, Default)]
@@ -190,6 +217,12 @@ impl ProxyHttp for BlockfrostProxy {
 
         if self.limiter(&ctx.consumer).await? {
             session.respond_error(429).await;
+            return Ok(true);
+        }
+
+        // TODO: this is a temporary fix while we migrate dbsync
+        if path == "/epochs/latest/parameters" {
+            self.respond_with_static_params(session, ctx).await;
             return Ok(true);
         }
 
