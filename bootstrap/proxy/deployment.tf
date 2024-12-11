@@ -168,8 +168,7 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
         toleration {
           effect   = "NoSchedule"
           key      = "demeter.run/availability-sla"
-          operator = "Equal"
-          value    = "consistent"
+          operator = "Exists"
         }
       }
     }
