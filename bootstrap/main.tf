@@ -46,6 +46,7 @@ module "blockfrost_v1_proxy" {
   dns_zone        = var.dns_zone
   resources       = var.proxy_resources
   name            = "proxy"
+  tolerations     = var.proxy_blue_tolerations
 }
 
 module "blockfrost_v1_proxy_green" {
@@ -59,6 +60,7 @@ module "blockfrost_v1_proxy_green" {
   resources       = var.proxy_resources
   environment     = "green"
   name            = "proxy-green"
+  tolerations     = var.proxy_green_tolerations
 }
 
 module "blockfrost_instances" {
