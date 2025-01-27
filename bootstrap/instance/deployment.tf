@@ -38,6 +38,13 @@ resource "kubernetes_deployment_v1" "blockfrost" {
       spec {
         restart_policy = "Always"
 
+        dynamic "image_pull_secrets" {
+          for_each = var.image_pull_secret != null ? [var.image_pull_secret] : []
+          content {
+            name = image_pull_secrets.value
+          }
+        }
+
         security_context {
           fs_group = 1000
         }
@@ -46,7 +53,7 @@ resource "kubernetes_deployment_v1" "blockfrost" {
           name              = "main"
           image             = local.image
           image_pull_policy = "IfNotPresent"
-          args              = ["yarn", "start"]
+          args              = var.network != "vector-testnet" ? ["yarn", "start"] : null
 
           env {
             name  = "BLOCKFROST_CONFIG_SERVER_LISTEN_ADDRESS"
@@ -104,6 +111,42 @@ resource "kubernetes_deployment_v1" "blockfrost" {
             }
           }
 
+          dynamic "env" {
+            for_each = var.network == "vector-testnet" ? [1] : []
+
+            content {
+              name  = "OGMIOS_HOST"
+              value = "ogmios-vector-testnet-6.ext-ogmios-m1.svc.cluster.local"
+            }
+
+          }
+
+          dynamic "env" {
+            for_each = var.network == "vector-testnet" ? [1] : []
+
+            content {
+              name  = "OGMIOS_PORT"
+              value = "1337"
+            }
+
+          }
+
+          dynamic "env" {
+            for_each = var.network == "vector-testnet" ? [1] : []
+
+            content {
+              name = "BLOCKFROST_CONFIG_DBSYNC_PASSWORD"
+
+              value_from {
+                secret_key_ref {
+                  key  = "password"
+                  name = var.dbsync_secret_name
+                }
+              }
+            }
+
+          }
+
           env {
             name = "PGPASSWORD"
 
@@ -114,6 +157,7 @@ resource "kubernetes_deployment_v1" "blockfrost" {
               }
             }
           }
+
           port {
             container_port = var.server_port
             name           = "api"

@@ -130,14 +130,15 @@ variable "proxy_resources" {
 
 variable "instances" {
   type = map(object({
-    image            = optional(string)
-    image_tag        = string
-    network          = string
-    salt             = string
-    replicas         = optional(number)
-    dbsync_database  = string
-    dbsync_host      = string
-    network_argument = optional(string)
+    image             = optional(string)
+    image_tag         = string
+    network           = string
+    salt              = string
+    replicas          = optional(number)
+    dbsync_database   = string
+    dbsync_host       = string
+    network_argument  = optional(string)
+    image_pull_secret = optional(string)
     resources = optional(object({
       limits = object({
         cpu    = string
