@@ -78,6 +78,7 @@ module "blockfrost_instances" {
   dbsync_database    = each.value.dbsync_database
   replicas           = coalesce(each.value.replicas, 1)
   network_argument   = each.value.network_argument
+  image_pull_secret  = each.value.image_pull_secret
   resources = coalesce(each.value.resources, {
     limits : {
       cpu : "200m"
