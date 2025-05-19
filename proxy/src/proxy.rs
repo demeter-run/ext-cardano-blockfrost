@@ -11,7 +11,7 @@ use pingora_limits::rate::Rate;
 use prometheus::{register_int_counter_vec, IntCounterVec};
 use regex::Regex;
 use std::sync::Arc;
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, Instant, SystemTime};
 use tracing::info;
 
 use crate::cache_rules::CacheRule;
@@ -140,7 +140,7 @@ impl BlockfrostProxy {
         session.write_response_header(header).await.unwrap();
     }
 
-    async fn respond_with_static_params(&self, session: &mut Session, ctx: &mut Context) {
+    async fn respond_with_static_params(&self, session: &mut Session, _ctx: &mut Context) {
         let body = include_str!("params.json");
 
         let mut header = ResponseHeader::build(200, None).unwrap();
@@ -175,6 +175,7 @@ pub struct Context {
     cache_rule: Option<CacheRule>,
     endpoint: String,
     is_health_request: bool,
+    start_time: Option<Instant>,
 }
 
 #[async_trait]
@@ -188,6 +189,7 @@ impl ProxyHttp for BlockfrostProxy {
     where
         Self::CTX: Send + Sync,
     {
+        ctx.start_time = Some(Instant::now());
         let state = self.state.clone();
 
         let path = session.req_header().uri.path();
@@ -214,6 +216,7 @@ impl ProxyHttp for BlockfrostProxy {
             "blockfrost-{}.{}:{}",
             ctx.consumer.network, self.config.blockfrost_dns, self.config.blockfrost_port
         );
+        ctx.instance = "localhost:3000".to_string();
 
         if self.limiter(&ctx.consumer).await? {
             session.respond_error(429).await;
@@ -264,6 +267,15 @@ impl ProxyHttp for BlockfrostProxy {
                 &ctx.instance,
                 &response_code,
             );
+            if let Some(start) = ctx.start_time {
+                let dur = start.elapsed();
+                self.state.metrics.observe_http_request_duration(
+                    &ctx.consumer,
+                    &response_code,
+                    ctx.cache_rule.is_some(),
+                    dur,
+                );
+            }
         }
     }
 

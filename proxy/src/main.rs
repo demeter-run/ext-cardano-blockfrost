@@ -10,7 +10,7 @@ use pingora::{
     services::background::background_service,
 };
 use pingora_limits::rate::Rate;
-use prometheus::{opts, register_int_counter_vec};
+use prometheus::{histogram_opts, opts, register_histogram_vec, register_int_counter_vec};
 use proxy::BlockfrostProxy;
 use redb_storage::ReDbCache;
 use regex::Regex;
@@ -168,9 +168,10 @@ pub fn deserialize_duration<'de, D: Deserializer<'de>>(
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Metrics {
     http_total_request: prometheus::IntCounterVec,
+    http_request_duration_seconds: prometheus::HistogramVec,
 }
 impl Metrics {
     pub fn new() -> Self {
@@ -187,7 +188,19 @@ impl Metrics {
         )
         .unwrap();
 
-        Self { http_total_request }
+        let http_request_duration_seconds = register_histogram_vec!(
+            histogram_opts!(
+                "blockfrost_proxy_http_request_duration_seconds",
+                "HTTP request duration in seconds"
+            ),
+            &["status_code", "network", "proxied"]
+        )
+        .unwrap();
+
+        Self {
+            http_total_request,
+            http_request_duration_seconds,
+        }
     }
 
     pub fn inc_http_total_request(
@@ -207,6 +220,18 @@ impl Metrics {
                 &consumer.tier,
             ])
             .inc()
+    }
+    /// Observe HTTP request duration in seconds.
+    pub fn observe_http_request_duration(
+        &self,
+        consumer: &Consumer,
+        status: &u16,
+        proxied: bool,
+        duration: std::time::Duration,
+    ) {
+        self.http_request_duration_seconds
+            .with_label_values(&[&status.to_string(), &consumer.network, &proxied.to_string()])
+            .observe(duration.as_secs_f64());
     }
 }
 impl Default for Metrics {
