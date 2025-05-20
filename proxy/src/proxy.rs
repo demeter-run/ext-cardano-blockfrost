@@ -216,7 +216,6 @@ impl ProxyHttp for BlockfrostProxy {
             "blockfrost-{}.{}:{}",
             ctx.consumer.network, self.config.blockfrost_dns, self.config.blockfrost_port
         );
-        ctx.instance = "localhost:3000".to_string();
 
         if self.limiter(&ctx.consumer).await? {
             session.respond_error(429).await;
