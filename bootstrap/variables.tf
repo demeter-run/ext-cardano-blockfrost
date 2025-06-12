@@ -139,6 +139,7 @@ variable "instances" {
     dbsync_host       = string
     network_argument  = optional(string)
     image_pull_secret = optional(string)
+    max_conn          = optional(number)
     resources = optional(object({
       limits = object({
         cpu    = string
