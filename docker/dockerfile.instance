@@ -1,5 +1,5 @@
 FROM node:18 as builder
-ARG tag=v3.0.1
+ARG tag=v4.1.2
 
 WORKDIR /app
 
