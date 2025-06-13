@@ -255,11 +255,6 @@ impl ProxyHttp for BlockfrostProxy {
                 .response_written()
                 .map_or(0, |resp| resp.status.as_u16());
 
-            info!(
-                "{} response code: {response_code}",
-                self.request_summary(session, ctx)
-            );
-
             self.state.metrics.inc_http_total_request(
                 &ctx.consumer,
                 &self.config.proxy_namespace,
@@ -268,11 +263,22 @@ impl ProxyHttp for BlockfrostProxy {
             );
             if let Some(start) = ctx.start_time {
                 let dur = start.elapsed();
+
                 self.state.metrics.observe_http_request_duration(
                     &ctx.consumer,
                     &response_code,
                     ctx.cache_rule.is_some(),
                     dur,
+                );
+                info!(
+                    response_time = dur.as_millis(),
+                    "{} response code: {response_code}",
+                    self.request_summary(session, ctx)
+                );
+            } else {
+                info!(
+                    "{} response code: {response_code}",
+                    self.request_summary(session, ctx)
                 );
             }
         }
