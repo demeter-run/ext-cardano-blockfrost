@@ -191,7 +191,11 @@ impl Metrics {
         let http_request_duration_seconds = register_histogram_vec!(
             histogram_opts!(
                 "blockfrost_proxy_http_request_duration_seconds",
-                "HTTP request duration in seconds"
+                "HTTP request duration in seconds",
+                vec![
+                    0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 20.0, 40.0,
+                    60.0, 90.0, 120.0
+                ]
             ),
             &["status_code", "network", "proxied"]
         )
