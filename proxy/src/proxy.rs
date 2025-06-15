@@ -41,6 +41,7 @@ pub struct BlockfrostProxy {
     config: Arc<Config>,
     host_regex: Regex,
 }
+
 impl BlockfrostProxy {
     pub fn new(state: Arc<State>, config: Arc<Config>) -> Self {
         let host_regex = Regex::new(r"([dmtr_]?[\w\d-]+)?\.?.+").unwrap();
@@ -212,10 +213,19 @@ impl ProxyHttp for BlockfrostProxy {
         }
 
         ctx.consumer = consumer.unwrap();
-        ctx.instance = format!(
-            "blockfrost-{}.{}:{}",
-            ctx.consumer.network, self.config.blockfrost_dns, self.config.blockfrost_port
-        );
+
+        if path.starts_with("/txs/") {
+            ctx.instance = format!(
+                //eg: internal-cardano-mainnet-grpc.ext-utxorpc-m1.svc.cluster.local:3001
+                "internal-cardano-{}-grpc.{}:{}",
+                ctx.consumer.network, self.config.utxorpc_dns, self.config.utxorpc_port
+            );
+        } else {
+            ctx.instance = format!(
+                "blockfrost-{}.{}:{}",
+                ctx.consumer.network, self.config.blockfrost_dns, self.config.blockfrost_port
+            );
+        }
 
         if self.limiter(&ctx.consumer).await? {
             session.respond_error(429).await;

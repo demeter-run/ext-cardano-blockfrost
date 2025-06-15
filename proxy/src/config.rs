@@ -13,6 +13,8 @@ pub struct Config {
     pub ssl_key_path: String,
     pub blockfrost_port: u16,
     pub blockfrost_dns: String,
+    pub utxorpc_port: u16,
+    pub utxorpc_dns: String,
 
     // Cache settings
     pub cache_rules_path: PathBuf,
@@ -25,6 +27,7 @@ pub struct Config {
     // Health endpoint
     pub health_endpoint: String,
 }
+
 impl Config {
     pub fn new() -> Self {
         Self {
@@ -49,6 +52,11 @@ impl Config {
                 .parse()
                 .expect("BLOCKFROST_PORT must a number"),
             blockfrost_dns: env::var("BLOCKFROST_DNS").expect("BLOCKFROST_DNS must be set"),
+            utxorpc_port: env::var("UTXORPC_PORT")
+                .expect("UTXORPC_PORT must be set")
+                .parse()
+                .expect("UTXORPC_PORT must a number"),
+            utxorpc_dns: env::var("UTXORPC_DNS").expect("UTXORPC_DNS must be set"),
             cache_rules_path: env::var("CACHE_RULES_PATH")
                 .map(|v| v.into())
                 .expect("CACHE_RULES_PATH must be set"),
