@@ -169,7 +169,7 @@ impl BlockfrostProxy {
     }
 
     fn is_path_supported_by_dolos(&self, path: &str) -> bool {
-        path.starts_with("/txs/")
+        path.starts_with("/txs/") || path.starts_with("/addresses/")
     }
 
     fn should_use_dolos(&self, path: &str) -> bool {
@@ -209,6 +209,7 @@ impl ProxyHttp for BlockfrostProxy {
         }
 
         if self.is_forbidden_endpoint(path) {
+            dbg!(path);
             session.respond_error(501).await;
             return Ok(true);
         }
