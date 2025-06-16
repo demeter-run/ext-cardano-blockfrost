@@ -14,6 +14,11 @@ pub struct Config {
     pub blockfrost_port: u16,
     pub blockfrost_dns: String,
 
+    // Dolos settings
+    pub dolos_enabled: bool,
+    pub dolos_port: u16,
+    pub dolos_dns: String,
+
     // Cache settings
     pub cache_rules_path: PathBuf,
     pub cache_db_path: String,
@@ -25,6 +30,7 @@ pub struct Config {
     // Health endpoint
     pub health_endpoint: String,
 }
+
 impl Config {
     pub fn new() -> Self {
         Self {
@@ -49,6 +55,12 @@ impl Config {
                 .parse()
                 .expect("BLOCKFROST_PORT must a number"),
             blockfrost_dns: env::var("BLOCKFROST_DNS").expect("BLOCKFROST_DNS must be set"),
+            dolos_enabled: env::var("DOLOS_ENABLED").unwrap_or("false".to_string()) == "true",
+            dolos_port: env::var("DOLOS_PORT")
+                .expect("DOLOS_PORT must be set")
+                .parse()
+                .expect("DOLOS_PORT must a number"),
+            dolos_dns: env::var("DOLOS_DNS").expect("DOLOS_DNS must be set"),
             cache_rules_path: env::var("CACHE_RULES_PATH")
                 .map(|v| v.into())
                 .expect("CACHE_RULES_PATH must be set"),

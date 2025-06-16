@@ -80,6 +80,21 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
           }
 
           env {
+            name  = "DOLOS_ENABLED"
+            value = var.dolos_enabled
+          }
+
+          env {
+            name  = "DOLOS_PORT"
+            value = var.dolos_port
+          }
+
+          env {
+            name  = "DOLOS_DNS"
+            value = var.dolos_dns
+          }
+
+          env {
             name  = "DEFAULT_BLOCKFROST_VERSION"
             value = "v1"
           }

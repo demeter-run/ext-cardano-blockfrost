@@ -41,6 +41,7 @@ pub struct BlockfrostProxy {
     config: Arc<Config>,
     host_regex: Regex,
 }
+
 impl BlockfrostProxy {
     pub fn new(state: Arc<State>, config: Arc<Config>) -> Self {
         let host_regex = Regex::new(r"([dmtr_]?[\w\d-]+)?\.?.+").unwrap();
@@ -166,6 +167,14 @@ impl BlockfrostProxy {
 
         session.finish_body().await.unwrap();
     }
+
+    fn is_path_supported_by_dolos(&self, path: &str) -> bool {
+        path.starts_with("/txs/")
+    }
+
+    fn should_use_dolos(&self, path: &str) -> bool {
+        self.config.dolos_enabled && self.is_path_supported_by_dolos(path)
+    }
 }
 
 #[derive(Debug, Default)]
@@ -212,10 +221,19 @@ impl ProxyHttp for BlockfrostProxy {
         }
 
         ctx.consumer = consumer.unwrap();
-        ctx.instance = format!(
-            "blockfrost-{}.{}:{}",
-            ctx.consumer.network, self.config.blockfrost_dns, self.config.blockfrost_port
-        );
+
+        if self.should_use_dolos(path) {
+            ctx.instance = format!(
+                //eg: internal-cardano-mainnet-minibf.ext-utxorpc-m1.svc.cluster.local:3001
+                "internal-cardano-{}-minibf.{}:{}",
+                ctx.consumer.network, self.config.dolos_dns, self.config.dolos_port
+            );
+        } else {
+            ctx.instance = format!(
+                "blockfrost-{}.{}:{}",
+                ctx.consumer.network, self.config.blockfrost_dns, self.config.blockfrost_port
+            );
+        }
 
         if self.limiter(&ctx.consumer).await? {
             session.respond_error(429).await;
