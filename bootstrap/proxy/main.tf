@@ -65,6 +65,19 @@ variable "blockfrost_port" {
   default = 3000
 }
 
+variable "dolos_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "dolos_port" {
+  type    = number
+  default = 3001
+}
+variable "dolos_dns" {
+  type    = string
+  default = "ext-utxorpc-m1.svc.cluster.local"
+}
 
 variable "extension_name" {
   type = string

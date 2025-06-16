@@ -167,6 +167,14 @@ impl BlockfrostProxy {
 
         session.finish_body().await.unwrap();
     }
+
+    fn is_path_supported_by_dolos(&self, path: &str) -> bool {
+        path.starts_with("/txs/")
+    }
+
+    fn should_use_dolos(&self, path: &str) -> bool {
+        self.config.dolos_enabled && self.is_path_supported_by_dolos(path)
+    }
 }
 
 #[derive(Debug, Default)]
@@ -214,11 +222,11 @@ impl ProxyHttp for BlockfrostProxy {
 
         ctx.consumer = consumer.unwrap();
 
-        if path.starts_with("/txs/") {
+        if self.should_use_dolos(path) {
             ctx.instance = format!(
-                //eg: internal-cardano-mainnet-grpc.ext-utxorpc-m1.svc.cluster.local:3001
-                "internal-cardano-{}-grpc.{}:{}",
-                ctx.consumer.network, self.config.utxorpc_dns, self.config.utxorpc_port
+                //eg: internal-cardano-mainnet-minibf.ext-utxorpc-m1.svc.cluster.local:3001
+                "internal-cardano-{}-minibf.{}:{}",
+                ctx.consumer.network, self.config.dolos_dns, self.config.dolos_port
             );
         } else {
             ctx.instance = format!(
