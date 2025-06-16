@@ -74,6 +74,7 @@ variable "dolos_port" {
   type    = number
   default = 3001
 }
+
 variable "dolos_dns" {
   type    = string
   default = "ext-utxorpc-m1.svc.cluster.local"
