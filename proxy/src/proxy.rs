@@ -169,7 +169,7 @@ impl BlockfrostProxy {
     }
 
     fn is_path_supported_by_dolos(&self, path: &str) -> bool {
-        path.starts_with("/txs/") || path.starts_with("/addresses/")
+        path.starts_with("/txs/")
     }
 
     fn should_use_dolos(&self, path: &str) -> bool {

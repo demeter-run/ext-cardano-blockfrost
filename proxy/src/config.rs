@@ -107,6 +107,8 @@ mod tests {
         env::set_var("CACHE_RULES_PATH", path);
         env::set_var("CACHE_DB_PATH", path);
         env::set_var("FORBIDDEN_ENDPOINTS", r"/network,/pools/\w+$");
+        env::set_var("DOLOS_PORT", "50051");
+        env::set_var("DOLOS_DNS", "ext-utxorpc-m1");
 
         let config = Config::new();
         assert!(config.forbidden_endpoints[0].matches("/network"));
