@@ -23,6 +23,7 @@ pub struct Config {
     pub cache_rules_path: PathBuf,
     pub cache_db_path: String,
     pub cache_failed_requests_seconds: u64,
+    pub cache_max_size_bytes: usize,
 
     // Forbidden endpoints
     pub forbidden_endpoints: Vec<ForbiddenEndpoint>,
@@ -69,6 +70,10 @@ impl Config {
                 .unwrap_or("20".to_string())
                 .parse()
                 .expect("CACHE_FAILED_REQUESTS_SECONDS must a number"),
+            cache_max_size_bytes: env::var("CACHE_MAX_SIZE_BYTES")
+                .unwrap_or("3000000".to_string())
+                .parse()
+                .expect("CACHE_MAX_SIZE_BYTES must a number"),
             forbidden_endpoints: env::var("FORBIDDEN_ENDPOINTS")
                 .unwrap_or("".into())
                 .split(',')

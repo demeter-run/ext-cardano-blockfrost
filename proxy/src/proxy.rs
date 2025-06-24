@@ -321,7 +321,9 @@ impl ProxyHttp for BlockfrostProxy {
 
     fn request_cache_filter(&self, session: &mut Session, ctx: &mut Self::CTX) -> Result<()> {
         if ctx.cache_rule.is_some() {
-            session.cache.enable(State::get_cache(), None, None, None);
+            session
+                .cache
+                .enable(State::get_cache(), Some(State::get_eviction()), None, None);
         }
         Ok(())
     }

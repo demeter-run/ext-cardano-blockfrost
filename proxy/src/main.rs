@@ -9,6 +9,7 @@ use pingora::{
     server::{configuration::Opt, Server},
     services::background::background_service,
 };
+use pingora_cache::eviction::simple_lru::Manager;
 use pingora_limits::rate::Rate;
 use prometheus::{histogram_opts, opts, register_histogram_vec, register_int_counter_vec};
 use proxy::BlockfrostProxy;
@@ -29,6 +30,7 @@ mod redb_storage;
 mod tiers;
 
 static CACHE: Lazy<ReDbCache> = Lazy::new(|| ReDbCache::new(Config::new().cache_db_path));
+static EVICTION: Lazy<Manager> = Lazy::new(|| Manager::new(Config::new().cache_max_size_bytes));
 
 fn main() {
     dotenv().ok();
@@ -96,6 +98,10 @@ impl State {
 
     pub fn get_cache() -> &'static ReDbCache {
         &CACHE
+    }
+
+    pub fn get_eviction() -> &'static Manager {
+        &EVICTION
     }
 }
 
