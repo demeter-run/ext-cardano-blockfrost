@@ -83,6 +83,10 @@ variable "dbsync_creds" {
 }
 
 // Proxy
+variable "dns_names" {
+  type = list(string)
+}
+
 variable "proxy_green_image_tag" {
   type = string
 }

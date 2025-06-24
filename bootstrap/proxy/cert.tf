@@ -13,7 +13,7 @@ resource "kubernetes_manifest" "certificate_cluster_wildcard_tls" {
       "namespace" = var.namespace
     }
     "spec" = {
-      "dnsNames" = local.dns_names
+      "dnsNames" = var.dns_names
 
       "issuerRef" = {
         "kind" = "ClusterIssuer"

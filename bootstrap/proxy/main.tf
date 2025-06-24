@@ -67,7 +67,7 @@ variable "blockfrost_port" {
 
 variable "dolos_enabled" {
   type    = bool
-  default = false
+  default = true
 }
 
 variable "dolos_port" {
@@ -92,6 +92,10 @@ variable "versions" {
 variable "dns_zone" {
   type    = string
   default = "demeter.run"
+}
+
+variable "dns_names" {
+  type = list(string)
 }
 
 variable "tolerations" {
