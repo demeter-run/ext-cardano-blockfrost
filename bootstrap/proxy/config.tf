@@ -45,11 +45,11 @@ locals {
       "rates" = [
         {
           "interval" = "1m",
-          "limit"    = floor(300 * 60 / var.replicas)
+          "limit"    = floor(600 * 60 / var.replicas)
         },
         {
           "interval" = "1d",
-          "limit"    = floor(26000000 / var.replicas)
+          "limit"    = floor(52000000 / var.replicas)
         }
       ]
     }
