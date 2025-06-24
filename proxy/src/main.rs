@@ -189,7 +189,7 @@ impl Metrics {
                 "instance",
                 "status_code",
                 "network",
-                "tier"
+                "tier",
             ]
         )
         .unwrap();
@@ -203,7 +203,7 @@ impl Metrics {
                     60.0, 90.0, 120.0
                 ]
             ),
-            &["status_code", "network", "proxied"]
+            &["status_code", "network", "proxied", "resolved_by"]
         )
         .unwrap();
 
@@ -238,9 +238,15 @@ impl Metrics {
         status: &u16,
         proxied: bool,
         duration: std::time::Duration,
+        resolved_by: String,
     ) {
         self.http_request_duration_seconds
-            .with_label_values(&[&status.to_string(), &consumer.network, &proxied.to_string()])
+            .with_label_values(&[
+                &status.to_string(),
+                &consumer.network,
+                &proxied.to_string(),
+                &resolved_by.to_string(),
+            ])
             .observe(duration.as_secs_f64());
     }
 }

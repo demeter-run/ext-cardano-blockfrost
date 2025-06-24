@@ -23,7 +23,7 @@ static CACHE_HIT_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "blockfrost_proxy_http_cache_hits",
         "Number of times cache was used.",
-        &["endpoint", "network", "project"]
+        &["endpoint", "network", "project", "resolved_by"]
     )
     .unwrap()
 });
@@ -31,7 +31,7 @@ static CACHE_MISS_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "blockfrost_proxy_http_cache_miss",
         "Number of times cache was requested, but no entry was found.",
-        &["endpoint", "network", "project"]
+        &["endpoint", "network", "project", "resolved_by"]
     )
     .unwrap()
 });
@@ -190,6 +190,7 @@ pub struct Context {
     endpoint: String,
     is_health_request: bool,
     start_time: Option<Instant>,
+    resolved_by: String,
 }
 
 #[async_trait]
@@ -234,11 +235,13 @@ impl ProxyHttp for BlockfrostProxy {
                 "internal-cardano-{}-minibf.{}:{}",
                 ctx.consumer.network, self.config.dolos_dns, self.config.dolos_port
             );
+            ctx.resolved_by = "dolos".to_string();
         } else {
             ctx.instance = format!(
                 "blockfrost-{}.{}:{}",
                 ctx.consumer.network, self.config.blockfrost_dns, self.config.blockfrost_port
             );
+            ctx.resolved_by = "blockfrost".to_string();
         }
 
         if self.limiter(&ctx.consumer).await? {
@@ -293,6 +296,7 @@ impl ProxyHttp for BlockfrostProxy {
                     &response_code,
                     ctx.cache_rule.is_some(),
                     dur,
+                    ctx.resolved_by.clone(),
                 );
                 info!(
                     response_time = dur.as_millis(),
@@ -374,6 +378,7 @@ impl ProxyHttp for BlockfrostProxy {
                 &ctx.cache_rule.clone().unwrap().endpoint.to_string(),
                 &ctx.consumer.network,
                 &ctx.consumer.namespace,
+                &ctx.resolved_by,
             ])
             .inc();
         Ok(false)
@@ -385,6 +390,7 @@ impl ProxyHttp for BlockfrostProxy {
                 &ctx.cache_rule.clone().unwrap().endpoint.to_string(),
                 &ctx.consumer.network,
                 &ctx.consumer.namespace,
+                &ctx.resolved_by,
             ])
             .inc();
         session.cache.cache_miss();
