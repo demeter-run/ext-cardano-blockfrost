@@ -168,12 +168,17 @@ impl BlockfrostProxy {
         session.finish_body().await.unwrap();
     }
 
-    fn is_path_supported_by_dolos(&self, path: &str) -> bool {
-        path.starts_with("/txs/")
+    fn is_dolos_path(&self, path: &str) -> bool {
+        for dolos_endpoint in self.config.dolos_endpoints.clone().into_iter() {
+            if dolos_endpoint.matches(path) {
+                return true;
+            }
+        }
+        false
     }
 
     fn should_use_dolos(&self, path: &str) -> bool {
-        self.config.dolos_enabled && self.is_path_supported_by_dolos(path)
+        self.config.dolos_enabled && self.is_dolos_path(path)
     }
 }
 

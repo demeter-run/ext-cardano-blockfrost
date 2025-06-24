@@ -129,6 +129,11 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
             value = "/network,/pools/extended,/pools/\\w+$"
           }
 
+          env {
+            name  = "DOLOS_ENDPOINTS"
+            value = "\\/txs.*,\\/blocks\\/[A-z0-9]+\\/txs\\/?$,\\/blocks\\/[A-z0-9]+\\/?$"
+          }
+
           volume_mount {
             mount_path = "/certs"
             name       = "certs"

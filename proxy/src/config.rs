@@ -1,6 +1,6 @@
 use std::{env, path::PathBuf, time::Duration};
 
-use crate::forbidden_endpoints::ForbiddenEndpoint;
+use crate::endpoints::Endpoint;
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -18,6 +18,7 @@ pub struct Config {
     pub dolos_enabled: bool,
     pub dolos_port: u16,
     pub dolos_dns: String,
+    pub dolos_endpoints: Vec<Endpoint>,
 
     // Cache settings
     pub cache_rules_path: PathBuf,
@@ -26,7 +27,7 @@ pub struct Config {
     pub cache_max_size_bytes: usize,
 
     // Forbidden endpoints
-    pub forbidden_endpoints: Vec<ForbiddenEndpoint>,
+    pub forbidden_endpoints: Vec<Endpoint>,
 
     // Health endpoint
     pub health_endpoint: String,
@@ -77,9 +78,12 @@ impl Config {
             forbidden_endpoints: env::var("FORBIDDEN_ENDPOINTS")
                 .unwrap_or("".into())
                 .split(',')
-                .map(|endpoint| {
-                    ForbiddenEndpoint::new(endpoint).expect("Invalid forbidden endpoint regex")
-                })
+                .map(|endpoint| Endpoint::new(endpoint).expect("Invalid forbidden endpoint regex"))
+                .collect(),
+            dolos_endpoints: env::var("DOLOS_ENDPOINTS")
+                .expect("Missing DOLOS_ENDPOINTS variable")
+                .split(',')
+                .map(|endpoint| Endpoint::new(endpoint).expect("Invalid dolos endpoint regex"))
                 .collect(),
             health_endpoint: "/dmtr_health".to_string(),
         }
