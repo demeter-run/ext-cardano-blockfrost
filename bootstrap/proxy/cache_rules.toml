@@ -1,12 +1,4 @@
 [[rules]]
-  endpoint = "/blocks/latest.*"
-  duration_s = 20
-
-[[rules]]
-  endpoint = "/blocks/.*"
-  duration_s = 120
-
-[[rules]]
   endpoint = "/nutlink/.*"
   duration_s = 20
 
@@ -33,10 +25,6 @@
 [[rules]]
   endpoint = "/genesis"
   duration_s = 3600
-
-[[rules]]
-  endpoint = "/txs.*"
-  duration_s = 300
 
 [[rules]]
   endpoint = "/scripts"
