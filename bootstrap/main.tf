@@ -37,32 +37,34 @@ module "blockfrost_v1_feature" {
 }
 
 module "blockfrost_v1_proxy" {
-  depends_on      = [kubernetes_namespace.namespace]
-  source          = "./proxy"
-  namespace       = var.namespace
-  replicas        = var.proxy_blue_replicas
-  proxy_image_tag = var.proxy_blue_image_tag
-  extension_name  = var.extension_name
-  dns_zone        = var.dns_zone
-  resources       = var.proxy_resources
-  name            = "proxy"
-  tolerations     = var.proxy_blue_tolerations
-  dns_names       = var.dns_names
+  depends_on           = [kubernetes_namespace.namespace]
+  source               = "./proxy"
+  namespace            = var.namespace
+  replicas             = var.proxy_blue_replicas
+  proxy_image_tag      = var.proxy_blue_image_tag
+  extension_name       = var.extension_name
+  dns_zone             = var.dns_zone
+  resources            = var.proxy_resources
+  name                 = "proxy"
+  tolerations          = var.proxy_blue_tolerations
+  dns_names            = var.dns_names
+  cache_max_size_bytes = var.proxy_cache_max_size_bytes
 }
 
 module "blockfrost_v1_proxy_green" {
-  depends_on      = [kubernetes_namespace.namespace]
-  source          = "./proxy"
-  namespace       = var.namespace
-  replicas        = var.proxy_green_replicas
-  proxy_image_tag = var.proxy_green_image_tag
-  extension_name  = var.extension_name
-  dns_zone        = var.dns_zone
-  resources       = var.proxy_resources
-  environment     = "green"
-  name            = "proxy-green"
-  tolerations     = var.proxy_green_tolerations
-  dns_names       = var.dns_names
+  depends_on           = [kubernetes_namespace.namespace]
+  source               = "./proxy"
+  namespace            = var.namespace
+  replicas             = var.proxy_green_replicas
+  proxy_image_tag      = var.proxy_green_image_tag
+  extension_name       = var.extension_name
+  dns_zone             = var.dns_zone
+  resources            = var.proxy_resources
+  environment          = "green"
+  name                 = "proxy-green"
+  tolerations          = var.proxy_green_tolerations
+  dns_names            = var.dns_names
+  cache_max_size_bytes = var.proxy_cache_max_size_bytes
 }
 
 module "blockfrost_instances" {

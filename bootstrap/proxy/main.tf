@@ -98,6 +98,11 @@ variable "dns_names" {
   type = list(string)
 }
 
+variable "cache_max_size_bytes" {
+  type    = number
+  default = 3000000000
+}
+
 variable "tolerations" {
   type = list(object({
     effect   = string

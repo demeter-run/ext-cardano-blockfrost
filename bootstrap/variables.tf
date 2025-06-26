@@ -87,6 +87,11 @@ variable "dns_names" {
   type = list(string)
 }
 
+variable "proxy_cache_max_size_bytes" {
+  type    = number
+  default = 3000000000
+}
+
 variable "proxy_green_image_tag" {
   type = string
 }

@@ -125,6 +125,11 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
           }
 
           env {
+            name  = "CACHE_MAX_SIZE_BYTES"
+            value = var.cache_max_size_bytes
+          }
+
+          env {
             name  = "FORBIDDEN_ENDPOINTS"
             value = "/network,/pools/extended,/pools/\\w+$"
           }

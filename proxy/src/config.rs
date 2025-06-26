@@ -72,7 +72,7 @@ impl Config {
                 .parse()
                 .expect("CACHE_FAILED_REQUESTS_SECONDS must a number"),
             cache_max_size_bytes: env::var("CACHE_MAX_SIZE_BYTES")
-                .unwrap_or("3000000".to_string())
+                .unwrap_or("3000000000".to_string())
                 .parse()
                 .expect("CACHE_MAX_SIZE_BYTES must a number"),
             forbidden_endpoints: env::var("FORBIDDEN_ENDPOINTS")
