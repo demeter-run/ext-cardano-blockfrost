@@ -149,8 +149,7 @@ pub fn run_metrics_collector(state: Arc<State>) {
             if status.is_client_error() || status.is_server_error() {
                 error!(status = status.to_string(), "request status code fail");
                 state.metrics.metrics_failure(&Error::HttpError(format!(
-                    "Prometheus request error. Status: {} Query: {}",
-                    status, query
+                    "Prometheus request error. Status: {status} Query: {query}",
                 )));
                 continue;
             }
@@ -180,8 +179,7 @@ pub fn run_metrics_collector(state: Arc<State>) {
                 let dcu_per_request = config.dcu_per_request.get(&network);
                 if dcu_per_request.is_none() {
                     let error = Error::ConfigError(format!(
-                        "dcu_per_request not configured to {} network",
-                        network
+                        "dcu_per_request not configured to {network} network",
                     ));
                     error!(error = error.to_string());
                     state.metrics.metrics_failure(&error);
