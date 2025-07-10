@@ -50,7 +50,7 @@ pub async fn build_api_key(crd: &BlockfrostPort) -> Result<String, Error> {
 
     let name = format!("blockfrost-auth-{}", &crd.name_any());
 
-    let password = format!("{}{}", name, namespace).as_bytes().to_vec();
+    let password = format!("{name}{namespace}").as_bytes().to_vec();
 
     let config = get_config();
     let salt = config.api_key_salt.as_bytes();
