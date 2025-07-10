@@ -35,21 +35,25 @@ static CACHE_MISS_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
     )
     .unwrap()
 });
+static LAST_BYRON_BLOCK: u32 = 4490510;
 
 pub struct BlockfrostProxy {
     state: Arc<State>,
     config: Arc<Config>,
     host_regex: Regex,
+    blocks_endpoint_regex: Regex,
 }
 
 impl BlockfrostProxy {
     pub fn new(state: Arc<State>, config: Arc<Config>) -> Self {
         let host_regex = Regex::new(r"([dmtr_]?[\w\d-]+)?\.?.+").unwrap();
+        let blocks_endpoint_regex = Regex::new(r"^\/blocks\/([A-z0-9]+)\/?\w*$").unwrap();
 
         Self {
             state,
             config,
             host_regex,
+            blocks_endpoint_regex,
         }
     }
 
@@ -169,6 +173,20 @@ impl BlockfrostProxy {
     }
 
     fn is_dolos_path(&self, path: &str) -> bool {
+        // ADHOC: Old blocks should go to DBSync
+        if let Some(captures) = self.blocks_endpoint_regex.captures(path) {
+            if let Some(hash_or_number) = captures.get(1) {
+                let hash_or_number = hash_or_number.as_str();
+                if hash_or_number.len() != 64 {
+                    if let Ok(number) = hash_or_number.parse::<u32>() {
+                        if number <= LAST_BYRON_BLOCK {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
         for dolos_endpoint in self.config.dolos_endpoints.clone().into_iter() {
             if dolos_endpoint.matches(path) {
                 return true;
