@@ -136,7 +136,7 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
 
           env {
             name  = "DOLOS_ENDPOINTS"
-            value = "\\/txs.*,\\/blocks\\/[A-z0-9]+\\/txs\\/?$,\\/blocks\\/[A-z0-9]+\\/?$"
+            value = "\\/txs.*,\\/blocks\\/[A-z0-9]+\\/txs\\/?$,\\/blocks\\/[A-z0-9]+\\/?$,\\/addresses\\/[A-z0-9]+\\/utxos(\\?.*)?$"
           }
 
           volume_mount {
