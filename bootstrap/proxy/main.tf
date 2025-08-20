@@ -103,6 +103,11 @@ variable "cache_max_size_bytes" {
   default = 3000000000
 }
 
+variable "dolos_endpoints" {
+  type    = string
+  default = "\\/blocks\\/[A-z0-9]+\\/txs\\/?$,\\/blocks\\/[A-z0-9]+\\/?$,\\/addresses\\/[A-z0-9]+\\/utxos(\\?.*)?$"
+}
+
 variable "tolerations" {
   type = list(object({
     effect   = string
