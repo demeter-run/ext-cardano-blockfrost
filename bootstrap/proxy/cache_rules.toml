@@ -33,3 +33,7 @@
 [[rules]]
   endpoint = "/scripts/.*"
   duration_s = 300
+
+[[rules]]
+  endpoint = "/txs/.*"
+  duration_s = 300
