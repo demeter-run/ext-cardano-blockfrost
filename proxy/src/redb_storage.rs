@@ -33,7 +33,7 @@ impl ReDbCache {
         }
     }
 
-    pub fn table(&self) -> TableDefinition<&str, CacheObject> {
+    pub fn table(&self) -> TableDefinition<'_, &str, CacheObject> {
         TableDefinition::new(self.table_name.as_str())
     }
 }

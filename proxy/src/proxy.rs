@@ -195,8 +195,8 @@ impl BlockfrostProxy {
         false
     }
 
-    fn should_use_dolos(&self, path: &str) -> bool {
-        self.config.dolos_enabled && self.is_dolos_path(path)
+    fn should_use_dolos(&self, network: &str, path: &str) -> bool {
+        network != "vector-testnet" && self.config.dolos_enabled && self.is_dolos_path(path)
     }
 }
 
@@ -247,7 +247,7 @@ impl ProxyHttp for BlockfrostProxy {
 
         ctx.consumer = consumer.unwrap();
 
-        if self.should_use_dolos(path) {
+        if self.should_use_dolos(&ctx.consumer.network, path) {
             ctx.instance = format!(
                 //eg: internal-cardano-mainnet-minibf.ext-utxorpc-m1.svc.cluster.local:3001
                 "internal-cardano-{}-minibf.{}:{}",
