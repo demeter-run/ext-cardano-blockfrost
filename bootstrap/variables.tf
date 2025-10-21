@@ -24,7 +24,7 @@ variable "extension_subdomain" {
 
 variable "networks" {
   type    = list(string)
-  default = ["mainnet", "preprod", "preview"]
+  default = ["cardano-mainnet", "cardano-preprod", "cardano-preview"]
 }
 
 // Operator

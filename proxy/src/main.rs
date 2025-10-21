@@ -21,6 +21,8 @@ use tiers::TierBackgroundService;
 use tokio::sync::RwLock;
 use tracing::Level;
 
+use crate::utils::handle_legacy_networks;
+
 mod auth;
 mod cache_rules;
 mod config;
@@ -28,6 +30,7 @@ mod endpoints;
 mod proxy;
 mod redb_storage;
 mod tiers;
+mod utils;
 
 static CACHE: Lazy<ReDbCache> = Lazy::new(|| ReDbCache::new(Config::new().cache_db_path));
 static EVICTION: Lazy<Manager> = Lazy::new(|| Manager::new(Config::new().cache_max_size_bytes));
@@ -120,7 +123,7 @@ impl Display for Consumer {
 }
 impl From<&BlockfrostPort> for Consumer {
     fn from(value: &BlockfrostPort) -> Self {
-        let network = value.spec.network.to_string();
+        let network = handle_legacy_networks(&value.spec.network);
         let tier = value.spec.throughput_tier.to_string();
         let key = value.status.as_ref().unwrap().auth_token.clone();
         let namespace = value.metadata.namespace.as_ref().unwrap().clone();
