@@ -223,7 +223,7 @@ impl ProxyHttp for BlockfrostProxy {
         if self.should_use_dolos(&ctx.consumer.network, path) {
             ctx.instance = format!(
                 //eg: internal-cardano-mainnet-minibf.ext-utxorpc-m1.svc.cluster.local:3001
-                "internal-cardano-{}-minibf.{}:{}",
+                "internal-{}-minibf.{}:{}",
                 ctx.consumer.network, self.config.dolos_dns, self.config.dolos_port
             );
             ctx.resolved_by = "dolos".to_string();
