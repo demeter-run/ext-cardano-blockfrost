@@ -171,6 +171,19 @@ impl BlockfrostProxy {
     fn should_use_dolos(&self, network: &str, path: &str) -> bool {
         network != "vector-testnet" && self.config.dolos_enabled && self.is_dolos_path(path)
     }
+
+    fn is_submit_api_path(&self, path: &str) -> bool {
+        for submit_api_endpoint in self.config.submitapi_endpoints.clone().into_iter() {
+            if submit_api_endpoint.matches(path) {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn should_use_submit_api(&self, path: &str) -> bool {
+        self.config.submitapi_enabled && self.is_submit_api_path(path)
+    }
 }
 
 #[derive(Debug, Default)]
@@ -220,7 +233,14 @@ impl ProxyHttp for BlockfrostProxy {
 
         ctx.consumer = consumer.unwrap();
 
-        if self.should_use_dolos(&ctx.consumer.network, path) {
+        if self.should_use_submit_api(path) {
+            ctx.instance = format!(
+                //eg: internal-cardano-mainnet-submitapi.ext-submitapi-m1.svc.cluster.local:8090
+                "internal-{}-submitapi.{}:{}",
+                ctx.consumer.network, self.config.submitapi_dns, self.config.submitapi_port
+            );
+            ctx.resolved_by = "submitapi".to_string();
+        } else if self.should_use_dolos(&ctx.consumer.network, path) {
             ctx.instance = format!(
                 //eg: internal-cardano-mainnet-minibf.ext-utxorpc-m1.svc.cluster.local:3001
                 "internal-{}-minibf.{}:{}",

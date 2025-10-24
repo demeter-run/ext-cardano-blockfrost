@@ -20,6 +20,12 @@ pub struct Config {
     pub dolos_dns: String,
     pub dolos_endpoints: Vec<Endpoint>,
 
+    // Submit API settings
+    pub submitapi_enabled: bool,
+    pub submitapi_port: u16,
+    pub submitapi_dns: String,
+    pub submitapi_endpoints: Vec<Endpoint>,
+
     // Cache settings
     pub cache_rules_path: PathBuf,
     pub cache_db_path: String,
@@ -85,6 +91,17 @@ impl Config {
                 .split(',')
                 .map(|endpoint| Endpoint::new(endpoint).expect("Invalid dolos endpoint regex"))
                 .collect(),
+            submitapi_enabled: env::var("SUBMITAPI_ENABLED").unwrap_or("false".to_string()) == "true",
+            submitapi_port: env::var("SUBMITAPI_PORT")
+                .expect("SUBMITAPI_PORT must be set")
+                .parse()
+                .expect("SUBMITAPI_PORT must be a number"),
+            submitapi_dns: env::var("SUBMITAPI_DNS").expect("SUBMITAPI_DNS must be set"),
+            submitapi_endpoints: env::var("SUBMITAPI_ENDPOINTS")
+                .expect("Missing SUBMITAPI_ENDPOINTS variable")
+                .split(',')
+                .map(|endpoint| Endpoint::new(endpoint).expect("Invalid submit api endpoint regex"))
+                .collect(),
             health_endpoint: "/dmtr_health".to_string(),
         }
     }
@@ -118,6 +135,10 @@ mod tests {
         env::set_var("FORBIDDEN_ENDPOINTS", r"/network,/pools/\w+$");
         env::set_var("DOLOS_PORT", "50051");
         env::set_var("DOLOS_DNS", "ext-utxorpc-m1");
+        env::set_var("DOLOS_ENDPOINTS", r"/blocks/,/epochs/");
+        env::set_var("SUBMITAPI_PORT", "8090");
+        env::set_var("SUBMITAPI_DNS", "ext-submitapi-m1");
+        env::set_var("SUBMITAPI_ENDPOINTS", r"/tx/submit");
 
         let config = Config::new();
         assert!(config.forbidden_endpoints[0].matches("/network"));

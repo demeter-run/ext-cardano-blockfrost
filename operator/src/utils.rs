@@ -99,6 +99,7 @@ mod test {
                 network: "preview".to_string(),
                 throughput_tier: "0".to_string(),
                 blockfrost_version: Some("v1".to_string()),
+                auth_token: None,
             },
         );
         crd.metadata.namespace = Some("namespace".to_string());

@@ -139,6 +139,26 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
             value = var.dolos_endpoints
           }
 
+          env {
+            name  = "SUBMITAPI_ENABLED"
+            value = var.submitapi_enabled
+          }
+
+          env {
+            name  = "SUBMITAPI_PORT"
+            value = var.submitapi_port
+          }
+
+          env {
+            name  = "SUBMITAPI_DNS"
+            value = var.submitapi_dns
+          }
+
+          env {
+            name  = "SUBMITAPI_ENDPOINTS"
+            value = var.submitapi_endpoints
+          }
+
           volume_mount {
             mount_path = "/certs"
             name       = "certs"
