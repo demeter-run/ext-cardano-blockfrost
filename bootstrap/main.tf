@@ -50,7 +50,6 @@ module "blockfrost_v1_proxy" {
   dns_names            = var.dns_names
   cache_max_size_bytes = var.proxy_cache_max_size_bytes
   dolos_endpoints      = var.proxy_blue_dolos_endpoints
-  submitapi_endpoints  = var.proxy_blue_submitapi_endpoints
 }
 
 module "blockfrost_v1_proxy_green" {
@@ -68,7 +67,6 @@ module "blockfrost_v1_proxy_green" {
   dns_names            = var.dns_names
   cache_max_size_bytes = var.proxy_cache_max_size_bytes
   dolos_endpoints      = var.proxy_green_dolos_endpoints
-  submitapi_endpoints  = var.proxy_green_submitapi_endpoints
 }
 
 module "blockfrost_instances" {

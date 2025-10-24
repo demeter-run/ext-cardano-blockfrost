@@ -123,11 +123,6 @@ variable "submitapi_dns" {
   default = "ext-submitapi-m1.svc.cluster.local"
 }
 
-variable "submitapi_endpoints" {
-  type    = string
-  default = "\\/tx\\/submit"
-}
-
 variable "tolerations" {
   type = list(object({
     effect   = string

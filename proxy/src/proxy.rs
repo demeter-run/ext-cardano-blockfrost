@@ -173,12 +173,7 @@ impl BlockfrostProxy {
     }
 
     fn is_submit_api_path(&self, path: &str) -> bool {
-        for submit_api_endpoint in self.config.submitapi_endpoints.clone().into_iter() {
-            if submit_api_endpoint.matches(path) {
-                return true;
-            }
-        }
-        false
+        path == "/tx/submit"
     }
 
     fn should_use_submit_api(&self, path: &str) -> bool {

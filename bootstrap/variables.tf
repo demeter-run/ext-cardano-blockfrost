@@ -102,16 +102,6 @@ variable "proxy_green_dolos_endpoints" {
   default = "\\/blocks\\/[A-z0-9]+\\/txs\\/?$,\\/blocks\\/[A-z0-9]+\\/?$,\\/addresses\\/[A-z0-9]+\\/utxos(\\?.*)?$"
 }
 
-variable "proxy_blue_submitapi_endpoints" {
-  type    = string
-  default = "\\/tx\\/submit"
-}
-
-variable "proxy_green_submitapi_endpoints" {
-  type    = string
-  default = "\\/tx\\/submit"
-}
-
 variable "proxy_green_image_tag" {
   type = string
 }
