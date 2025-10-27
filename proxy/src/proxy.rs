@@ -230,8 +230,8 @@ impl ProxyHttp for BlockfrostProxy {
 
         if self.should_use_submit_api(path) {
             ctx.instance = format!(
-                //eg: internal-cardano-mainnet-submitapi.ext-submitapi-m1.svc.cluster.local:8090
-                "internal-{}-submitapi.{}:{}",
+                //eg: submitapi-cardano-mainnet.ext-submitapi-m1.svc.cluster.local:8090
+                "submitapi-{}.{}:{}",
                 ctx.consumer.network, self.config.submitapi_dns, self.config.submitapi_port
             );
             ctx.resolved_by = "submitapi".to_string();
