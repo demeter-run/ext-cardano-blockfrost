@@ -108,6 +108,21 @@ variable "dolos_endpoints" {
   default = "\\/blocks\\/[A-z0-9]+\\/txs\\/?$,\\/blocks\\/[A-z0-9]+\\/?$,\\/addresses\\/[A-z0-9]+\\/utxos(\\?.*)?$"
 }
 
+variable "submitapi_enabled" {
+  type    = bool
+  default = true
+}
+
+variable "submitapi_port" {
+  type    = number
+  default = 8090
+}
+
+variable "submitapi_dns" {
+  type    = string
+  default = "ext-submitapi-m1.svc.cluster.local"
+}
+
 variable "tolerations" {
   type = list(object({
     effect   = string
