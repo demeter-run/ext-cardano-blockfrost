@@ -271,6 +271,25 @@ impl ProxyHttp for BlockfrostProxy {
         Ok(Box::new(http_peer))
     }
 
+    async fn upstream_request_filter(
+        &self,
+        _session: &mut Session,
+        upstream_request: &mut RequestHeader,
+        ctx: &mut Self::CTX,
+    ) -> Result<()>
+    where
+        Self::CTX: Send + Sync,
+    {
+        // Modify the path based on the resolved_by backend
+        if ctx.resolved_by == "submitapi" {
+            // We know the original path is /tx/submit
+            // Set the right path for Submit API
+            upstream_request.set_uri("/api/submit/tx".parse().unwrap());
+        }
+
+        Ok(())
+    }
+
     async fn logging(
         &self,
         session: &mut Session,
