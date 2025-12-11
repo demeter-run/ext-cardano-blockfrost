@@ -169,7 +169,7 @@ impl BlockfrostProxy {
     }
 
     fn should_use_dolos(&self, network: &str, path: &str) -> bool {
-        network != "vector-testnet" && self.config.dolos_enabled && self.is_dolos_path(path)
+        !network.starts_with("vector") && self.config.dolos_enabled && self.is_dolos_path(path)
     }
 
     fn is_submit_api_path(&self, path: &str) -> bool {
