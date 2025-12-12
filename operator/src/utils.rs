@@ -85,7 +85,6 @@ mod test {
         env::set_var("API_KEY_SALT", "api_key_salt");
         env::set_var("METRICS_DELAY", "100");
         env::set_var("PROMETHEUS_URL", "prometheus_url");
-        env::set_var("DCU_PER_REQUEST", "preview=5,preprod=5,mainnet=5");
         env::set_var("DEFAULT_BLOCKFROST_VERSION", "v1");
     }
 
