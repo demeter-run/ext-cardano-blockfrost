@@ -148,7 +148,6 @@ pub fn run_metrics_collector(state: Arc<State>) {
                 let project = project_captures.get(1).unwrap().as_str();
                 let resource_name = project_captures.get(2).unwrap().as_str();
 
-                let network = result.metric.network.unwrap();
                 let tier = result.metric.tier.unwrap();
 
                 state

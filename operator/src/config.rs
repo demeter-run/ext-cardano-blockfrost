@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use std::{collections::HashMap, env, time::Duration};
+use std::{env, time::Duration};
 
 lazy_static! {
     static ref CONTROLLER_CONFIG: Config = Config::from_env();
