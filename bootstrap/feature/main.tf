@@ -24,16 +24,6 @@ variable "metrics_delay" {
   default     = "30"
 }
 
-variable "dcu_per_request" {
-  type = map(string)
-  default = {
-    "mainnet"   = "10"
-    "preprod"   = "5"
-    "preview"   = "5"
-    "sanchonet" = "5"
-  }
-}
-
 variable "resources" {
   type = object({
     limits = object({

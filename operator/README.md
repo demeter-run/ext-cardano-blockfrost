@@ -11,7 +11,6 @@ This operator will create a key into the CRD to allow Blockfrost to be accessed 
 | API_KEY_SALT               | blockfrost-salt               |
 | METRICS_DELAY              | 40                            |
 | PROMETHEUS_URL             |                               |
-| DCU_PER_REQUEST            | preview=5,preprod=5,mainnet=5 |
 
 ## Port CRD
 
