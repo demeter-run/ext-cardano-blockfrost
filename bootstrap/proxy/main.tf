@@ -60,19 +60,9 @@ variable "resources" {
   }
 }
 
-variable "blockfrost_port" {
-  type    = number
-  default = 3000
-}
-
 variable "dolos_enabled" {
   type    = bool
   default = true
-}
-
-variable "dolos_port" {
-  type    = number
-  default = 3001
 }
 
 variable "dolos_dns" {
@@ -103,24 +93,39 @@ variable "cache_max_size_bytes" {
   default = 3000000000
 }
 
-variable "dolos_endpoints" {
-  type    = string
-  default = "\\/blocks\\/[A-z0-9]+\\/txs\\/?$,\\/blocks\\/[A-z0-9]+\\/?$,\\/addresses\\/[A-z0-9]+\\/utxos(\\?.*)?$"
-}
-
-variable "submitapi_enabled" {
-  type    = bool
-  default = true
-}
-
-variable "submitapi_port" {
-  type    = number
-  default = 8090
-}
-
 variable "submitapi_dns" {
   type    = string
   default = "ext-submitapi-m1.svc.cluster.local"
+}
+
+variable "routing_poll_interval" {
+  type    = number
+  default = 2
+}
+
+variable "routing_routes" {
+  type = list(object({
+    path    = string
+    backend = string
+  }))
+  default = [
+    {
+      path    = "/blocks/:hash/txs"
+      backend = "dolos"
+    },
+    {
+      path    = "/blocks/:hash"
+      backend = "dolos"
+    },
+    {
+      path    = "/addresses/:address/utxos"
+      backend = "dolos"
+    },
+    {
+      path    = "/tx/submit"
+      backend = "submitapi"
+    }
+  ]
 }
 
 variable "tolerations" {

@@ -1,3 +1,4 @@
+use crate::routing::{Backend, ROUTER};
 use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use pingora::http::{RequestHeader, ResponseHeader, StatusCode};
@@ -37,23 +38,70 @@ static CACHE_MISS_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
 });
 static LAST_BYRON_BLOCK: u32 = 4490510;
 
+fn resolve_backend_for_config(config: &Config, network: &str, path: &str) -> Backend {
+    let router = ROUTER.load();
+    let backend = router.resolve(path);
+
+    match backend {
+        Backend::Dolos => {
+            if should_use_dolos(config, network, path) {
+                Backend::Dolos
+            } else {
+                Backend::Blockfrost
+            }
+        }
+        Backend::Blockfrost | Backend::SubmitApi => backend,
+    }
+}
+
+fn format_instance_for_config(backend: Backend, network: &str) -> String {
+    let router = ROUTER.load();
+    let template = router.backend_template(backend);
+    template.replace("{network}", network)
+}
+
+fn should_use_dolos(config: &Config, network: &str, path: &str) -> bool {
+    !network.starts_with("vector") && config.dolos_enabled && !is_byron_block_path(path)
+}
+
+fn is_byron_block_path(path: &str) -> bool {
+    let mut segments = path.trim_start_matches('/').split('/');
+    if segments.next() != Some("blocks") {
+        return false;
+    }
+
+    let hash_or_number = match segments.next() {
+        Some(value) => value,
+        None => return false,
+    };
+
+    if !hash_or_number.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return false;
+    }
+
+    if hash_or_number.len() != 64 {
+        if let Ok(number) = hash_or_number.parse::<u32>() {
+            return number <= LAST_BYRON_BLOCK;
+        }
+    }
+
+    false
+}
+
 pub struct BlockfrostProxy {
     state: Arc<State>,
     config: Arc<Config>,
     host_regex: Regex,
-    blocks_endpoint_regex: Regex,
 }
 
 impl BlockfrostProxy {
     pub fn new(state: Arc<State>, config: Arc<Config>) -> Self {
         let host_regex = Regex::new(r"([dmtr_]?[\w\d-]+)?\.?.+").unwrap();
-        let blocks_endpoint_regex = Regex::new(r"^\/blocks\/([A-z0-9]+)\/?\w*$").unwrap();
 
         Self {
             state,
             config,
             host_regex,
-            blocks_endpoint_regex,
         }
     }
 
@@ -144,41 +192,6 @@ impl BlockfrostProxy {
         let header = Box::new(ResponseHeader::build(200, None).unwrap());
         session.write_response_header(header).await.unwrap();
     }
-
-    fn is_dolos_path(&self, path: &str) -> bool {
-        // ADHOC: Old blocks should go to DBSync
-        if let Some(captures) = self.blocks_endpoint_regex.captures(path) {
-            if let Some(hash_or_number) = captures.get(1) {
-                let hash_or_number = hash_or_number.as_str();
-                if hash_or_number.len() != 64 {
-                    if let Ok(number) = hash_or_number.parse::<u32>() {
-                        if number <= LAST_BYRON_BLOCK {
-                            return false;
-                        }
-                    }
-                }
-            }
-        }
-
-        for dolos_endpoint in self.config.dolos_endpoints.clone().into_iter() {
-            if dolos_endpoint.matches(path) {
-                return true;
-            }
-        }
-        false
-    }
-
-    fn should_use_dolos(&self, network: &str, path: &str) -> bool {
-        !network.starts_with("vector") && self.config.dolos_enabled && self.is_dolos_path(path)
-    }
-
-    fn is_submit_api_path(&self, path: &str) -> bool {
-        path == "/tx/submit"
-    }
-
-    fn should_use_submit_api(&self, path: &str) -> bool {
-        self.config.submitapi_enabled && self.is_submit_api_path(path)
-    }
 }
 
 #[derive(Debug, Default)]
@@ -228,27 +241,9 @@ impl ProxyHttp for BlockfrostProxy {
 
         ctx.consumer = consumer.unwrap();
 
-        if self.should_use_submit_api(path) {
-            ctx.instance = format!(
-                //eg: submitapi-cardano-mainnet.ext-submitapi-m1.svc.cluster.local:8090
-                "submitapi-{}.{}:{}",
-                ctx.consumer.network, self.config.submitapi_dns, self.config.submitapi_port
-            );
-            ctx.resolved_by = "submitapi".to_string();
-        } else if self.should_use_dolos(&ctx.consumer.network, path) {
-            ctx.instance = format!(
-                //eg: internal-cardano-mainnet-minibf.ext-utxorpc-m1.svc.cluster.local:3001
-                "internal-{}-minibf.{}:{}",
-                ctx.consumer.network, self.config.dolos_dns, self.config.dolos_port
-            );
-            ctx.resolved_by = "dolos".to_string();
-        } else {
-            ctx.instance = format!(
-                "blockfrost-{}.{}:{}",
-                ctx.consumer.network, self.config.blockfrost_dns, self.config.blockfrost_port
-            );
-            ctx.resolved_by = "blockfrost".to_string();
-        }
+        let backend = resolve_backend_for_config(self.config.as_ref(), &ctx.consumer.network, path);
+        ctx.instance = format_instance_for_config(backend, &ctx.consumer.network);
+        ctx.resolved_by = backend.as_str().to_string();
 
         if self.limiter(&ctx.consumer).await? {
             session.respond_error(429).await;
@@ -413,5 +408,92 @@ impl ProxyHttp for BlockfrostProxy {
             ])
             .inc();
         session.cache.cache_miss();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::routing::{BackendTemplateConfig, RouteConfig, RoutingConfig};
+    use once_cell::sync::Lazy;
+    use std::path::PathBuf;
+    use std::sync::Mutex;
+
+    static ROUTER_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+
+    fn base_config() -> Config {
+        Config {
+            proxy_addr: "0.0.0.0:0".to_string(),
+            proxy_namespace: "proxy".to_string(),
+            proxy_tiers_path: PathBuf::from("/tmp"),
+            proxy_tiers_poll_interval: Duration::from_secs(1),
+            prometheus_addr: "0.0.0.0:0".to_string(),
+            ssl_crt_path: "crt".to_string(),
+            ssl_key_path: "key".to_string(),
+            dolos_enabled: true,
+            routing_config_path: PathBuf::from("/tmp/routing.toml"),
+            routing_poll_interval: Duration::from_secs(1),
+            cache_rules_path: PathBuf::from("/tmp"),
+            cache_db_path: "cache".to_string(),
+            cache_failed_requests_seconds: 5,
+            cache_max_size_bytes: 1024,
+            forbidden_endpoints: vec![],
+            health_endpoint: "/health".to_string(),
+        }
+    }
+
+    #[test]
+    fn byron_blocks_stay_on_blockfrost() {
+        let _guard = ROUTER_LOCK.lock().unwrap();
+        let cfg = RoutingConfig {
+            default_backend: "blockfrost".to_string(),
+            backend_templates: BackendTemplateConfig::default(),
+            routes: vec![
+                RouteConfig {
+                    path: "/blocks/:hash".to_string(),
+                    backend: "dolos".to_string(),
+                },
+                RouteConfig {
+                    path: "/tx/submit".to_string(),
+                    backend: "submitapi".to_string(),
+                },
+            ],
+        };
+        let router = cfg.build_router().unwrap();
+        ROUTER.store(Arc::new(router));
+
+        let config = base_config();
+        assert_eq!(
+            resolve_backend_for_config(&config, "cardano-mainnet", "/blocks/4490000"),
+            Backend::Blockfrost
+        );
+        assert_eq!(
+            resolve_backend_for_config(&config, "cardano-mainnet", "/blocks/4490511"),
+            Backend::Dolos
+        );
+    }
+
+    #[test]
+    fn template_interpolation_uses_config() {
+        let _guard = ROUTER_LOCK.lock().unwrap();
+        let cfg = RoutingConfig {
+            default_backend: "blockfrost".to_string(),
+            backend_templates: BackendTemplateConfig {
+                blockfrost: "bf-{network}:3000".to_string(),
+                dolos: "dolos-{network}:50051".to_string(),
+                submitapi: "submit-{network}:8090".to_string(),
+            },
+            routes: vec![RouteConfig {
+                path: "/tx/submit".to_string(),
+                backend: "submitapi".to_string(),
+            }],
+        };
+        let router = cfg.build_router().unwrap();
+        ROUTER.store(Arc::new(router));
+
+        assert_eq!(
+            format_instance_for_config(Backend::SubmitApi, "cardano-mainnet"),
+            "submit-cardano-mainnet:8090"
+        );
     }
 }

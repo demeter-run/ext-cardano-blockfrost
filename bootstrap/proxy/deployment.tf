@@ -70,29 +70,10 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
           }
 
           env {
-            name  = "BLOCKFROST_PORT"
-            value = var.blockfrost_port
-          }
-
-          env {
-            name  = "BLOCKFROST_DNS"
-            value = "${var.namespace}.svc.cluster.local"
-          }
-
-          env {
             name  = "DOLOS_ENABLED"
             value = var.dolos_enabled
           }
 
-          env {
-            name  = "DOLOS_PORT"
-            value = var.dolos_port
-          }
-
-          env {
-            name  = "DOLOS_DNS"
-            value = var.dolos_dns
-          }
 
           env {
             name  = "DEFAULT_BLOCKFROST_VERSION"
@@ -120,6 +101,16 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
           }
 
           env {
+            name  = "ROUTING_CONFIG_PATH"
+            value = "/configs/routing.toml"
+          }
+
+          env {
+            name  = "ROUTING_POLL_INTERVAL"
+            value = tostring(var.routing_poll_interval)
+          }
+
+          env {
             name  = "CACHE_DB_PATH"
             value = "/cache/cache.redb"
           }
@@ -134,25 +125,6 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
             value = "/network,/pools/extended,/pools/\\w+$"
           }
 
-          env {
-            name  = "DOLOS_ENDPOINTS"
-            value = var.dolos_endpoints
-          }
-
-          env {
-            name  = "SUBMITAPI_ENABLED"
-            value = var.submitapi_enabled
-          }
-
-          env {
-            name  = "SUBMITAPI_PORT"
-            value = var.submitapi_port
-          }
-
-          env {
-            name  = "SUBMITAPI_DNS"
-            value = var.submitapi_dns
-          }
 
           volume_mount {
             mount_path = "/certs"

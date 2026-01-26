@@ -11,11 +11,11 @@ This proxy will allow Blockfrost to be accessed externally.
 | PROMETHEUS_ADDR        | 0.0.0.0:9090            |
 | SSL_CRT_PATH           | /localhost.crt          |
 | SSL_KEY_PATH           | /localhost.key          |
-| BLOCKFROST_PORT        |                         |
-| BLOCKFROST_DNS         | internal k8s dns        |
 | PROXY_TIERS_PATH       | path of tiers toml file |
 | CACHE_RULES_PATH       | path for cache rules    |
 | CACHE_DB_PATH          | path for cache db       |
+| ROUTING_CONFIG_PATH    | path for routing rules  |
+| ROUTING_POLL_INTERVAL  | routing reload seconds  |
 
 ## Rate limit
 
@@ -64,6 +64,33 @@ duration = 300
 ```
 
 After configuring, the file path must be set on the env `CACHE_RULES_PATH`.
+
+## Routing
+
+Routing rules live in a separate TOML file (pointed to by `ROUTING_CONFIG_PATH`) and are hot reloaded. Routes are matched using axum-style paths with `:param` segments. The default backend and instance templates can be set in the routing config. Templates should include the full backend host and port with `{network}` as the only variable.
+
+```toml
+default_backend = "blockfrost"
+
+[backend_templates]
+blockfrost = "blockfrost-{network}.svc.cluster.local:3000"
+dolos = "internal-{network}-minibf.svc.cluster.local:50051"
+submitapi = "submitapi-{network}.svc.cluster.local:8090"
+
+[[routes]]
+path = "/blocks/:hash"
+backend = "dolos"
+
+[[routes]]
+path = "/tx/submit"
+backend = "submitapi"
+```
+
+Template variables:
+
+- `{network}`: consumer network
+
+The routing file is reloaded every `ROUTING_POLL_INTERVAL` seconds. If this env is not set, it defaults to 2 seconds.
 
 ## Commands
 
