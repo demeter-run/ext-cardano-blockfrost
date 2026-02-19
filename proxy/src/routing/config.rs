@@ -82,7 +82,7 @@ mod tests {
             default_backend: "blockfrost".into(),
             backend_templates: BackendTemplateConfig::default(),
             routes: vec![RouteConfig {
-                path: "/blocks/:hash".into(),
+                path: "/blocks/{hash}".into(),
                 backend: "dolos".into(),
             }],
         };

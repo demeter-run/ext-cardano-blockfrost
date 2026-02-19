@@ -67,7 +67,7 @@ After configuring, the file path must be set on the env `CACHE_RULES_PATH`.
 
 ## Routing
 
-Routing rules live in a separate TOML file (pointed to by `ROUTING_CONFIG_PATH`) and are hot reloaded. Routes are matched using axum-style paths with `:param` segments. The default backend and instance templates can be set in the routing config. Templates should include the full backend host and port with `{network}` as the only variable.
+Routing rules live in a separate TOML file (pointed to by `ROUTING_CONFIG_PATH`) and are hot reloaded. Routes are matched using matchit-style paths with `{param}` segments. The default backend and instance templates can be set in the routing config. Templates should include the full backend host and port with `{network}` as the only variable.
 
 ```toml
 default_backend = "blockfrost"
@@ -78,7 +78,7 @@ dolos = "internal-{network}-minibf.svc.cluster.local:50051"
 submitapi = "submitapi-{network}.svc.cluster.local:8090"
 
 [[routes]]
-path = "/blocks/:hash"
+path = "/blocks/{hash}"
 backend = "dolos"
 
 [[routes]]

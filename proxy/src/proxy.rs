@@ -450,7 +450,7 @@ mod tests {
             backend_templates: BackendTemplateConfig::default(),
             routes: vec![
                 RouteConfig {
-                    path: "/blocks/:hash".to_string(),
+                    path: "/blocks/{hash}".to_string(),
                     backend: "dolos".to_string(),
                 },
                 RouteConfig {

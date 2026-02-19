@@ -110,15 +110,15 @@ variable "routing_routes" {
   }))
   default = [
     {
-      path    = "/blocks/:hash/txs"
+      path    = "/blocks/{hash}/txs"
       backend = "dolos"
     },
     {
-      path    = "/blocks/:hash"
+      path    = "/blocks/{hash}"
       backend = "dolos"
     },
     {
-      path    = "/addresses/:address/utxos"
+      path    = "/addresses/{address}/utxos"
       backend = "dolos"
     },
     {
