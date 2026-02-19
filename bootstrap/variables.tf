@@ -74,7 +74,7 @@ variable "metrics_delay" {
   default = 60
 }
 
-// Instance 
+// Instance
 variable "dbsync_creds" {
   type = object({
     username = string
@@ -99,15 +99,15 @@ variable "proxy_blue_routing_routes" {
   }))
   default = [
     {
-      path    = "/blocks/:hash/txs"
+      path    = "/blocks/{hash}/txs"
       backend = "dolos"
     },
     {
-      path    = "/blocks/:hash"
+      path    = "/blocks/{hash}"
       backend = "dolos"
     },
     {
-      path    = "/addresses/:address/utxos"
+      path    = "/addresses/{address}/utxos"
       backend = "dolos"
     },
     {
@@ -124,15 +124,15 @@ variable "proxy_green_routing_routes" {
   }))
   default = [
     {
-      path    = "/blocks/:hash/txs"
+      path    = "/blocks/{hash}/txs"
       backend = "dolos"
     },
     {
-      path    = "/blocks/:hash"
+      path    = "/blocks/{hash}"
       backend = "dolos"
     },
     {
-      path    = "/addresses/:address/utxos"
+      path    = "/addresses/{address}/utxos"
       backend = "dolos"
     },
     {
