@@ -82,6 +82,8 @@ fn main() {
         ctx.set_max_early_data(16384).unwrap();
     }
 
+    tls_settings.enable_h2();
+
     blockfrost_http_proxy.add_tls_with_settings(&config.proxy_addr, None, tls_settings);
     server.add_service(blockfrost_http_proxy);
 
