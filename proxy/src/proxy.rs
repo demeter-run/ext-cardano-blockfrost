@@ -104,7 +104,8 @@ impl BlockfrostProxy {
     fn extract_key(&self, session: &Session) -> String {
         let host = session
             .get_header("host")
-            .map(|v| v.to_str().unwrap())
+            .and_then(|v| v.to_str().ok())
+            .or_else(|| session.req_header().uri.authority().map(|a| a.as_str()))
             .unwrap();
 
         let captures = self.host_regex.captures(host).unwrap();
