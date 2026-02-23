@@ -80,13 +80,22 @@ fn main() {
         &server.configuration,
         BlockfrostProxy::new(state.clone(), config.clone()),
     );
-    blockfrost_http_proxy
-        .add_tls(
-            &config.proxy_addr,
-            &config.ssl_crt_path,
-            &config.ssl_key_path,
-        )
-        .unwrap();
+    let mut tls_settings = pingora::listeners::TlsSettings::intermediate(
+        &config.ssl_crt_path,
+        &config.ssl_key_path,
+    )
+    .unwrap();
+
+    {
+        use std::ops::DerefMut;
+        let ctx = tls_settings.deref_mut().deref_mut();
+        ctx.set_num_tickets(2).unwrap();
+        ctx.set_max_early_data(16384).unwrap();
+    }
+
+    tls_settings.enable_h2();
+
+    blockfrost_http_proxy.add_tls_with_settings(&config.proxy_addr, None, tls_settings);
     server.add_service(blockfrost_http_proxy);
 
     let mut prometheus_service = pingora::services::listening::Service::prometheus_http_service();
