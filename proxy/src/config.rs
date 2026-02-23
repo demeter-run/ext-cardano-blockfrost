@@ -11,19 +11,12 @@ pub struct Config {
     pub prometheus_addr: String,
     pub ssl_crt_path: String,
     pub ssl_key_path: String,
-    pub blockfrost_port: u16,
-    pub blockfrost_dns: String,
-
     // Dolos settings
     pub dolos_enabled: bool,
-    pub dolos_port: u16,
-    pub dolos_dns: String,
-    pub dolos_endpoints: Vec<Endpoint>,
 
-    // Submit API settings
-    pub submitapi_enabled: bool,
-    pub submitapi_port: u16,
-    pub submitapi_dns: String,
+    // Routing settings
+    pub routing_config_path: PathBuf,
+    pub routing_poll_interval: Duration,
 
     // Cache settings
     pub cache_rules_path: PathBuf,
@@ -57,17 +50,7 @@ impl Config {
             prometheus_addr: env::var("PROMETHEUS_ADDR").expect("PROMETHEUS_ADDR must be set"),
             ssl_crt_path: env::var("SSL_CRT_PATH").expect("SSL_CRT_PATH must be set"),
             ssl_key_path: env::var("SSL_KEY_PATH").expect("SSL_KEY_PATH must be set"),
-            blockfrost_port: env::var("BLOCKFROST_PORT")
-                .expect("BLOCKFROST_PORT must be set")
-                .parse()
-                .expect("BLOCKFROST_PORT must a number"),
-            blockfrost_dns: env::var("BLOCKFROST_DNS").expect("BLOCKFROST_DNS must be set"),
             dolos_enabled: env::var("DOLOS_ENABLED").unwrap_or("false".to_string()) == "true",
-            dolos_port: env::var("DOLOS_PORT")
-                .expect("DOLOS_PORT must be set")
-                .parse()
-                .expect("DOLOS_PORT must a number"),
-            dolos_dns: env::var("DOLOS_DNS").expect("DOLOS_DNS must be set"),
             cache_rules_path: env::var("CACHE_RULES_PATH")
                 .map(|v| v.into())
                 .expect("CACHE_RULES_PATH must be set"),
@@ -85,17 +68,14 @@ impl Config {
                 .split(',')
                 .map(|endpoint| Endpoint::new(endpoint).expect("Invalid forbidden endpoint regex"))
                 .collect(),
-            dolos_endpoints: env::var("DOLOS_ENDPOINTS")
-                .expect("Missing DOLOS_ENDPOINTS variable")
-                .split(',')
-                .map(|endpoint| Endpoint::new(endpoint).expect("Invalid dolos endpoint regex"))
-                .collect(),
-            submitapi_enabled: env::var("SUBMITAPI_ENABLED").unwrap_or("false".to_string()) == "true",
-            submitapi_port: env::var("SUBMITAPI_PORT")
-                .expect("SUBMITAPI_PORT must be set")
-                .parse()
-                .expect("SUBMITAPI_PORT must be a number"),
-            submitapi_dns: env::var("SUBMITAPI_DNS").expect("SUBMITAPI_DNS must be set"),
+            routing_config_path: env::var("ROUTING_CONFIG_PATH")
+                .map(|v| v.into())
+                .expect("ROUTING_CONFIG_PATH must be set"),
+            routing_poll_interval: env::var("ROUTING_POLL_INTERVAL")
+                .ok()
+                .and_then(|v| v.parse::<u64>().ok())
+                .map(Duration::from_secs)
+                .unwrap_or(Duration::from_secs(2)),
             health_endpoint: "/dmtr_health".to_string(),
         }
     }
@@ -122,16 +102,11 @@ mod tests {
         env::set_var("PROMETHEUS_ADDR", "0.0.0.0:8001");
         env::set_var("SSL_CRT_PATH", "ssl_crt_path");
         env::set_var("SSL_KEY_PATH", "ssl_key_path");
-        env::set_var("BLOCKFROST_PORT", "3000");
-        env::set_var("BLOCKFROST_DNS", "ext-blockfrost-m1");
         env::set_var("CACHE_RULES_PATH", path);
         env::set_var("CACHE_DB_PATH", path);
         env::set_var("FORBIDDEN_ENDPOINTS", r"/network,/pools/\w+$");
-        env::set_var("DOLOS_PORT", "50051");
-        env::set_var("DOLOS_DNS", "ext-utxorpc-m1");
-        env::set_var("DOLOS_ENDPOINTS", r"/blocks/,/epochs/");
-        env::set_var("SUBMITAPI_PORT", "8090");
-        env::set_var("SUBMITAPI_DNS", "ext-submitapi-m1");
+        env::set_var("ROUTING_CONFIG_PATH", path);
+        env::set_var("ROUTING_POLL_INTERVAL", "2");
 
         let config = Config::new();
         assert!(config.forbidden_endpoints[0].matches("/network"));

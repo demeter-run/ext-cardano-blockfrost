@@ -64,7 +64,7 @@ variable "metrics_delay" {
   default = 60
 }
 
-// Instance 
+// Instance
 variable "dbsync_creds" {
   type = object({
     username = string
@@ -82,14 +82,54 @@ variable "proxy_cache_max_size_bytes" {
   default = 3000000000
 }
 
-variable "proxy_blue_dolos_endpoints" {
-  type    = string
-  default = "\\/blocks\\/[A-z0-9]+\\/txs\\/?$,\\/blocks\\/[A-z0-9]+\\/?$,\\/addresses\\/[A-z0-9]+\\/utxos(\\?.*)?$"
+variable "proxy_blue_routing_routes" {
+  type = list(object({
+    path    = string
+    backend = string
+  }))
+  default = [
+    {
+      path    = "/blocks/{hash}/txs"
+      backend = "dolos"
+    },
+    {
+      path    = "/blocks/{hash}"
+      backend = "dolos"
+    },
+    {
+      path    = "/addresses/{address}/utxos"
+      backend = "dolos"
+    },
+    {
+      path    = "/tx/submit"
+      backend = "submitapi"
+    }
+  ]
 }
 
-variable "proxy_green_dolos_endpoints" {
-  type    = string
-  default = "\\/blocks\\/[A-z0-9]+\\/txs\\/?$,\\/blocks\\/[A-z0-9]+\\/?$,\\/addresses\\/[A-z0-9]+\\/utxos(\\?.*)?$"
+variable "proxy_green_routing_routes" {
+  type = list(object({
+    path    = string
+    backend = string
+  }))
+  default = [
+    {
+      path    = "/blocks/{hash}/txs"
+      backend = "dolos"
+    },
+    {
+      path    = "/blocks/{hash}"
+      backend = "dolos"
+    },
+    {
+      path    = "/addresses/{address}/utxos"
+      backend = "dolos"
+    },
+    {
+      path    = "/tx/submit"
+      backend = "submitapi"
+    }
+  ]
 }
 
 variable "proxy_green_image_tag" {

@@ -56,6 +56,11 @@ locals {
   ]
 
   configmap_name = var.environment != null ? "proxy-${var.environment}-config" : "proxy-config"
+  routing_backend_templates = {
+    blockfrost = "blockfrost-{network}.${var.namespace}.svc.cluster.local:3000"
+    dolos      = "internal-{network}-minibf.${var.dolos_dns}:50051"
+    submitapi  = "submitapi-{network}.${var.submitapi_dns}:8090"
+  }
 }
 
 resource "kubernetes_config_map" "proxy" {
@@ -67,5 +72,10 @@ resource "kubernetes_config_map" "proxy" {
   data = {
     "tiers.toml"       = "${templatefile("${path.module}/proxy-config.toml.tftpl", { tiers = local.tiers })}"
     "cache_rules.toml" = file("${path.module}/cache_rules.toml")
+    "routing.toml" = "${templatefile("${path.module}/routing.toml.tftpl", {
+      default_backend   = "blockfrost"
+      backend_templates = local.routing_backend_templates
+      routes            = var.routing_routes
+    })}"
   }
 }

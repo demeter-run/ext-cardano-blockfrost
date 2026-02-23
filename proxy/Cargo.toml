@@ -11,6 +11,7 @@ async-trait = "0.1.77"
 dotenv = "0.15.0"
 futures-util = "0.3.30"
 lazy_static = "1.5.0"
+arc-swap = "1.7.1"
 pingora = { version = "0.1.0", features = ["proxy"] }
 pingora-limits = "0.1.0"
 regex = "1.10.3"
@@ -23,6 +24,7 @@ toml = "0.8.10"
 prometheus = "0.13.3"
 notify = "6.1.1"
 bytes = "1.5.0"
+matchit = "0.9.1"
 pingora-cache = { version = "0.1.0"}
 pingora-core = { version = "0.1.0"}
 pingora-error = { version = "0.1.0"}

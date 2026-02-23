@@ -18,6 +18,7 @@ use regex::Regex;
 use serde::{Deserialize, Deserializer};
 use std::{collections::HashMap, fmt::Display, sync::Arc, time::Duration};
 use tiers::TierBackgroundService;
+use routing::background::RoutingBackgroundService;
 use tokio::sync::RwLock;
 use tracing::Level;
 
@@ -31,6 +32,7 @@ mod proxy;
 mod redb_storage;
 mod tiers;
 mod utils;
+mod routing;
 
 static CACHE: Lazy<ReDbCache> = Lazy::new(|| ReDbCache::new(Config::new().cache_db_path));
 static EVICTION: Lazy<Manager> = Lazy::new(|| Manager::new(Config::new().cache_max_size_bytes));
@@ -64,6 +66,15 @@ fn main() {
         TierBackgroundService::new(state.clone(), config.clone()),
     );
     server.add_service(tier_background_service);
+
+    let routing_background_service = background_service(
+        "Routing Service",
+        RoutingBackgroundService::new(
+            Arc::new(config.routing_config_path.clone()),
+            config.routing_poll_interval,
+        ),
+    );
+    server.add_service(routing_background_service);
 
     let mut blockfrost_http_proxy = pingora::proxy::http_proxy_service(
         &server.configuration,

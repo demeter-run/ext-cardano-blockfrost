@@ -1,0 +1,12 @@
+default_backend = "${default_backend}"
+
+[backend_templates]
+blockfrost = "${backend_templates.blockfrost}"
+dolos = "${backend_templates.dolos}"
+submitapi = "${backend_templates.submitapi}"
+
+%{ for route in routes ~}
+[[routes]]
+path = "${route.path}"
+backend = "${route.backend}"
+%{ endfor ~}

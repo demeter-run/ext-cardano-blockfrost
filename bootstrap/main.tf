@@ -48,7 +48,7 @@ module "blockfrost_v1_proxy" {
   tolerations          = var.proxy_blue_tolerations
   dns_names            = var.dns_names
   cache_max_size_bytes = var.proxy_cache_max_size_bytes
-  dolos_endpoints      = var.proxy_blue_dolos_endpoints
+  routing_routes       = var.proxy_blue_routing_routes
 }
 
 module "blockfrost_v1_proxy_green" {
@@ -65,7 +65,7 @@ module "blockfrost_v1_proxy_green" {
   tolerations          = var.proxy_green_tolerations
   dns_names            = var.dns_names
   cache_max_size_bytes = var.proxy_cache_max_size_bytes
-  dolos_endpoints      = var.proxy_green_dolos_endpoints
+  routing_routes       = var.proxy_green_routing_routes
 }
 
 module "blockfrost_instances" {
@@ -126,4 +126,3 @@ module "blockfrost_services" {
   namespace = var.namespace
   network   = each.value
 }
-

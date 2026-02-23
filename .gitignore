@@ -5,3 +5,4 @@ env-crd.yaml
 tiers.toml
 cache_rules.toml
 test.redb
+routing_rules.toml
