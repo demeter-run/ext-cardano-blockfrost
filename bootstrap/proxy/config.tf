@@ -6,11 +6,11 @@ locals {
       "rates" = [
         {
           "interval" = "1m",
-          "limit"    = floor(5 * 60 / var.replicas)
+          "limit"    = floor(60 / var.replicas)
         },
         {
           "interval" = "1d",
-          "limit"    = floor(430000 / var.replicas)
+          "limit"    = floor(86400 / var.replicas)
         }
       ]
     },
@@ -58,7 +58,7 @@ locals {
   configmap_name = var.environment != null ? "proxy-${var.environment}-config" : "proxy-config"
   routing_backend_templates = {
     blockfrost = "blockfrost-{network}.${var.namespace}.svc.cluster.local:3000"
-    dolos      = "internal-{network}-minibf.${var.dolos_dns}:50051"
+    dolos      = "internal-{network}-minibf.${var.dolos_dns}:3000"
     submitapi  = "submitapi-{network}.${var.submitapi_dns}:8090"
   }
 }

@@ -219,20 +219,18 @@ variable "proxy_blue_tolerations" {
     {
       effect   = "NoSchedule"
       key      = "demeter.run/compute-profile"
-      operator = "Equal"
-      value    = "general-purpose"
+      operator = "Exists"
     },
     {
       effect   = "NoSchedule"
       key      = "demeter.run/compute-arch"
-      operator = "Equal"
-      value    = "x86"
+      operator = "Exists"
     },
     {
       effect   = "NoSchedule"
       key      = "demeter.run/availability-sla"
       operator = "Equal"
-      value    = "consistent"
+      value    = "best-effort"
     }
   ]
 }
@@ -248,20 +246,18 @@ variable "proxy_green_tolerations" {
     {
       effect   = "NoSchedule"
       key      = "demeter.run/compute-profile"
-      operator = "Equal"
-      value    = "general-purpose"
+      operator = "Exists"
     },
     {
       effect   = "NoSchedule"
       key      = "demeter.run/compute-arch"
-      operator = "Equal"
-      value    = "x86"
+      operator = "Exists"
     },
     {
       effect   = "NoSchedule"
       key      = "demeter.run/availability-sla"
       operator = "Equal"
-      value    = "consistent"
+      value    = "best-effort"
     }
   ]
 }

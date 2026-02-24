@@ -67,7 +67,7 @@ variable "dolos_enabled" {
 
 variable "dolos_dns" {
   type    = string
-  default = "ext-utxorpc-m1.svc.cluster.local"
+  default = "ftr-dolos-m1.svc.cluster.local"
 }
 
 variable "extension_name" {
@@ -139,20 +139,18 @@ variable "tolerations" {
     {
       effect   = "NoSchedule"
       key      = "demeter.run/compute-profile"
-      operator = "Equal"
-      value    = "general-purpose"
+      operator = "Exists"
     },
     {
       effect   = "NoSchedule"
       key      = "demeter.run/compute-arch"
-      operator = "Equal"
-      value    = "x86"
+      operator = "Exists"
     },
     {
       effect   = "NoSchedule"
       key      = "demeter.run/availability-sla"
       operator = "Equal"
-      value    = "consistent"
+      value    = "best-effort"
     }
   ]
 }
