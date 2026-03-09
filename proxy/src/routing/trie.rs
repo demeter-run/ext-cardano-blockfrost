@@ -128,4 +128,31 @@ mod tests {
         let mut trie = RouteTrie::new();
         assert!(trie.insert("/blocks/:hash", Backend::Dolos).is_err());
     }
+
+    #[test]
+    fn static_route_matches_with_trailing_slash() {
+        let mut trie = RouteTrie::new();
+        trie.insert("/blocks/latest", Backend::Dolos).unwrap();
+
+        assert_eq!(trie.resolve("/blocks/latest/"), Some(Backend::Dolos));
+        assert_eq!(trie.resolve("/blocks/latest///"), Some(Backend::Dolos));
+    }
+
+    #[test]
+    fn param_route_matches_with_trailing_slash() {
+        let mut trie = RouteTrie::new();
+        trie.insert("/blocks/{hash}", Backend::Dolos).unwrap();
+
+        assert_eq!(trie.resolve("/blocks/abc/"), Some(Backend::Dolos));
+        assert_eq!(trie.resolve("/blocks/abc///"), Some(Backend::Dolos));
+    }
+
+    #[test]
+    fn trailing_slash_on_insert_normalizes_path() {
+        let mut trie = RouteTrie::new();
+        trie.insert("/blocks/latest/", Backend::Dolos).unwrap();
+
+        assert_eq!(trie.resolve("/blocks/latest"), Some(Backend::Dolos));
+        assert_eq!(trie.resolve("/blocks/latest/"), Some(Backend::Dolos));
+    }
 }
