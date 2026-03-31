@@ -29,6 +29,7 @@ pub struct Config {
 
     // Health endpoint
     pub health_endpoint: String,
+    pub readiness_endpoint: String,
 }
 
 impl Config {
@@ -76,10 +77,25 @@ impl Config {
                 .and_then(|v| v.parse::<u64>().ok())
                 .map(Duration::from_secs)
                 .unwrap_or(Duration::from_secs(2)),
-            health_endpoint: "/dmtr_health".to_string(),
+            health_endpoint: endpoint_from_env("HEALTH_ENDPOINT", "/dmtr_health"),
+            readiness_endpoint: endpoint_from_env("READINESS_ENDPOINT", "/ready"),
         }
     }
 }
+
+fn endpoint_from_env(name: &str, default: &str) -> String {
+    let value = env::var(name).unwrap_or_else(|_| default.to_string());
+    normalize_endpoint(&value)
+}
+
+fn normalize_endpoint(value: &str) -> String {
+    if value.starts_with('/') {
+        value.to_string()
+    } else {
+        format!("/{value}")
+    }
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self::new()
@@ -96,21 +112,27 @@ mod tests {
         let file1 = NamedTempFile::new().unwrap();
         let path = file1.path().to_str().unwrap();
 
-        env::set_var("PROXY_ADDR", "0.0.0.0:8000");
-        env::set_var("PROXY_NAMESPACE", "namespace");
-        env::set_var("PROXY_TIERS_PATH", path);
-        env::set_var("PROMETHEUS_ADDR", "0.0.0.0:8001");
-        env::set_var("SSL_CRT_PATH", "ssl_crt_path");
-        env::set_var("SSL_KEY_PATH", "ssl_key_path");
-        env::set_var("CACHE_RULES_PATH", path);
-        env::set_var("CACHE_DB_PATH", path);
-        env::set_var("FORBIDDEN_ENDPOINTS", r"/network,/pools/\w+$");
-        env::set_var("ROUTING_CONFIG_PATH", path);
-        env::set_var("ROUTING_POLL_INTERVAL", "2");
+        unsafe {
+            env::set_var("PROXY_ADDR", "0.0.0.0:8000");
+            env::set_var("PROXY_NAMESPACE", "namespace");
+            env::set_var("PROXY_TIERS_PATH", path);
+            env::set_var("PROMETHEUS_ADDR", "0.0.0.0:8001");
+            env::set_var("SSL_CRT_PATH", "ssl_crt_path");
+            env::set_var("SSL_KEY_PATH", "ssl_key_path");
+            env::set_var("CACHE_RULES_PATH", path);
+            env::set_var("CACHE_DB_PATH", path);
+            env::set_var("FORBIDDEN_ENDPOINTS", r"/network,/pools/\w+$");
+            env::set_var("ROUTING_CONFIG_PATH", path);
+            env::set_var("ROUTING_POLL_INTERVAL", "2");
+            env::set_var("HEALTH_ENDPOINT", "dmtr_health");
+            env::set_var("READINESS_ENDPOINT", "/readyz");
+        }
 
         let config = Config::new();
         assert!(config.forbidden_endpoints[0].matches("/network"));
         assert!(config.forbidden_endpoints[1].matches("/pools/pool_id"));
         assert!(!config.forbidden_endpoints[1].matches("/pools/pool_id/blocks"));
+        assert_eq!(config.health_endpoint, "/dmtr_health");
+        assert_eq!(config.readiness_endpoint, "/readyz");
     }
 }

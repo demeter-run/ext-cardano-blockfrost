@@ -187,14 +187,32 @@ impl BlockfrostProxy {
     }
 
     async fn respond_health(&self, session: &mut Session, ctx: &mut Context) {
-        ctx.is_health_request = true;
+        self.respond_status(session, ctx, 200, "OK").await;
+    }
+
+    async fn respond_readiness(&self, session: &mut Session, ctx: &mut Context) {
+        let is_ready = self.state.is_ready() && !session.is_process_shutting_down();
+        let status = if is_ready { 200 } else { 503 };
+        let body = if is_ready { "READY" } else { "NOT READY" };
+
+        self.respond_status(session, ctx, status, body).await;
+    }
+
+    async fn respond_status(
+        &self,
+        session: &mut Session,
+        ctx: &mut Context,
+        status: u16,
+        body: &str,
+    ) {
+        ctx.is_probe_request = true;
         session.set_keepalive(None);
+        let header = Box::new(ResponseHeader::build(status, None).unwrap());
+        session.write_response_header(header, false).await.unwrap();
         session
-            .write_response_body(Some("OK".into()), true)
+            .write_response_body(Some(body.to_string().into()), true)
             .await
             .unwrap();
-        let header = Box::new(ResponseHeader::build(200, None).unwrap());
-        session.write_response_header(header, true).await.unwrap();
     }
 }
 
@@ -204,7 +222,7 @@ pub struct Context {
     consumer: Consumer,
     cache_rule: Option<CacheRule>,
     endpoint: String,
-    is_health_request: bool,
+    is_probe_request: bool,
     start_time: Option<Instant>,
     resolved_by: String,
 }
@@ -227,6 +245,17 @@ impl ProxyHttp for BlockfrostProxy {
 
         if path == self.config.health_endpoint {
             self.respond_health(session, ctx).await;
+            return Ok(true);
+        }
+
+        if path == self.config.readiness_endpoint {
+            self.respond_readiness(session, ctx).await;
+            return Ok(true);
+        }
+
+        if session.is_process_shutting_down() {
+            session.set_keepalive(None);
+            let _ = session.respond_error(503).await;
             return Ok(true);
         }
 
@@ -295,7 +324,7 @@ impl ProxyHttp for BlockfrostProxy {
         _e: Option<&pingora::Error>,
         ctx: &mut Self::CTX,
     ) {
-        if !ctx.is_health_request {
+        if !ctx.is_probe_request {
             let response_code = session
                 .response_written()
                 .map_or(0, |resp| resp.status.as_u16());
@@ -449,6 +478,7 @@ mod tests {
             cache_max_size_bytes: 1024,
             forbidden_endpoints: vec![],
             health_endpoint: "/health".to_string(),
+            readiness_endpoint: "/ready".to_string(),
         }
     }
 

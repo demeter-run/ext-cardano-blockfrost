@@ -3,11 +3,13 @@ use std::{fs, sync::Arc};
 
 use async_trait::async_trait;
 use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
-use pingora::{server::ShutdownWatch, services::background::BackgroundService};
+use pingora::{
+    server::ShutdownWatch,
+    services::{background::BackgroundService, ServiceReadyNotifier},
+};
 use regex::Regex;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
-use tokio::runtime::{Handle, Runtime};
 use tracing::{error, info, warn};
 
 use crate::{config::Config, State};
@@ -60,34 +62,30 @@ impl CacheRuleBackgroundService {
     }
 }
 
-pub fn runtime_handle() -> Handle {
-    match Handle::try_current() {
-        Ok(h) => h,
-        Err(_) => {
-            let rt = Runtime::new().unwrap();
-            rt.handle().clone()
-        }
-    }
-}
-
 #[async_trait]
 impl BackgroundService for CacheRuleBackgroundService {
-    async fn start(&self, mut _shutdown: ShutdownWatch) {
+    async fn start_with_ready_notifier(
+        &self,
+        mut shutdown: ShutdownWatch,
+        ready_notifier: ServiceReadyNotifier,
+    ) {
         if let Err(err) = self.update_cache_rules().await {
             error!(error = err.to_string(), "error to update cache_rules");
             return;
         }
 
+        self.state.set_cache_rules_ready();
+        ready_notifier.notify_ready();
+
         let (tx, mut rx) = tokio::sync::mpsc::channel::<Event>(1);
 
         let watcher_result = RecommendedWatcher::new(
-            move |result: Result<Event, notify::Error>| {
-                let event = result.unwrap();
-                if event.kind.is_modify() {
-                    runtime_handle().block_on(async {
-                        tx.send(event).await.unwrap();
-                    });
+            move |result: Result<Event, notify::Error>| match result {
+                Ok(event) if event.kind.is_modify() => {
+                    let _ = tx.blocking_send(event);
                 }
+                Ok(_) => {}
+                Err(err) => error!(error = err.to_string(), "error to watcher cache_rule"),
             },
             notify::Config::default(),
         );
@@ -104,13 +102,23 @@ impl BackgroundService for CacheRuleBackgroundService {
         }
 
         loop {
-            if rx.recv().await.is_some() {
-                if let Err(err) = self.update_cache_rules().await {
-                    error!(error = err.to_string(), "error to update cache_rules");
-                    continue;
+            tokio::select! {
+                _ = shutdown.changed() => {
+                    info!("cache_rules: shutdown requested");
+                    break;
                 }
+                event = rx.recv() => {
+                    if event.is_some() {
+                        if let Err(err) = self.update_cache_rules().await {
+                            error!(error = err.to_string(), "error to update cache_rules");
+                            continue;
+                        }
 
-                info!("cache_rules modified");
+                        info!("cache_rules modified");
+                    } else {
+                        break;
+                    }
+                }
             }
         }
     }

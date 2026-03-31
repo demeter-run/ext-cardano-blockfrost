@@ -2,20 +2,33 @@ use std::{error::Error, fs, sync::Arc};
 
 use async_trait::async_trait;
 use notify::{Event, PollWatcher, RecursiveMode, Watcher};
-use pingora::{server::ShutdownWatch, services::background::BackgroundService};
-use tokio::runtime::{Handle, Runtime};
+use pingora::{
+    server::ShutdownWatch,
+    services::{background::BackgroundService, ServiceReadyNotifier},
+};
 use tracing::{error, info, warn};
 
-use super::{ROUTER, RoutingConfig};
+use crate::State;
+
+use super::{RoutingConfig, ROUTER};
 
 pub struct RoutingBackgroundService {
+    state: Arc<State>,
     config_path: Arc<std::path::PathBuf>,
     poll_interval: std::time::Duration,
 }
 
 impl RoutingBackgroundService {
-    pub fn new(config_path: Arc<std::path::PathBuf>, poll_interval: std::time::Duration) -> Self {
-        Self { config_path, poll_interval }
+    pub fn new(
+        state: Arc<State>,
+        config_path: Arc<std::path::PathBuf>,
+        poll_interval: std::time::Duration,
+    ) -> Self {
+        Self {
+            state,
+            config_path,
+            poll_interval,
+        }
     }
 
     async fn update_router(&self) -> Result<(), Box<dyn Error>> {
@@ -29,11 +42,18 @@ impl RoutingBackgroundService {
 
 #[async_trait]
 impl BackgroundService for RoutingBackgroundService {
-    async fn start(&self, mut _shutdown: ShutdownWatch) {
+    async fn start_with_ready_notifier(
+        &self,
+        mut shutdown: ShutdownWatch,
+        ready_notifier: ServiceReadyNotifier,
+    ) {
         if let Err(err) = self.update_router().await {
             error!(error = err.to_string(), "error to update routing");
             return;
         }
+
+        self.state.set_routing_ready();
+        ready_notifier.notify_ready();
 
         let (tx, mut rx) = tokio::sync::mpsc::channel::<Event>(1);
 
@@ -44,9 +64,7 @@ impl BackgroundService for RoutingBackgroundService {
         let watcher_result = PollWatcher::new(
             move |res| {
                 if let Ok(event) = res {
-                    runtime_handle()
-                        .block_on(async { tx.send(event).await })
-                        .unwrap();
+                    let _ = tx.blocking_send(event);
                 }
             },
             watcher_config,
@@ -64,19 +82,22 @@ impl BackgroundService for RoutingBackgroundService {
         }
 
         loop {
-            if rx.recv().await.is_some() {
-                match self.update_router().await {
-                    Ok(_) => info!("routing modified"),
-                    Err(err) => warn!(error = err.to_string(), "invalid routing reload"),
+            tokio::select! {
+                _ = shutdown.changed() => {
+                    info!("routing: shutdown requested");
+                    break;
+                }
+                event = rx.recv() => {
+                    if event.is_some() {
+                        match self.update_router().await {
+                            Ok(_) => info!("routing modified"),
+                            Err(err) => warn!(error = err.to_string(), "invalid routing reload"),
+                        }
+                    } else {
+                        break;
+                    }
                 }
             }
         }
-    }
-}
-
-fn runtime_handle() -> Handle {
-    match Handle::try_current() {
-        Ok(h) => h,
-        Err(_) => Runtime::new().unwrap().handle().clone(),
     }
 }

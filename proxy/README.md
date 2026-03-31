@@ -16,6 +16,8 @@ This proxy will allow Blockfrost to be accessed externally.
 | CACHE_DB_PATH          | path for cache db       |
 | ROUTING_CONFIG_PATH    | path for routing rules  |
 | ROUTING_POLL_INTERVAL  | routing reload seconds  |
+| HEALTH_ENDPOINT        | /dmtr_health            |
+| READINESS_ENDPOINT     | /ready                  |
 
 ## Rate limit
 

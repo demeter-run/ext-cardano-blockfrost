@@ -24,6 +24,8 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
         labels = local.proxy_labels
       }
       spec {
+        termination_grace_period_seconds = 330
+
         container {
           name              = "main"
           image             = "ghcr.io/demeter-run/ext-cardano-blockfrost-proxy:${var.proxy_image_tag}"
@@ -54,6 +56,20 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
             protocol       = "TCP"
           }
 
+          readiness_probe {
+            failure_threshold     = 2
+            initial_delay_seconds = 5
+            period_seconds        = 5
+            success_threshold     = 1
+            timeout_seconds       = 5
+
+            http_get {
+              path   = "/ready"
+              port   = "proxy"
+              scheme = "HTTPS"
+            }
+          }
+
           env {
             name  = "PROXY_NAMESPACE"
             value = var.namespace
@@ -62,6 +78,16 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
           env {
             name  = "PROXY_ADDR"
             value = local.proxy_addr
+          }
+
+          env {
+            name  = "HEALTH_ENDPOINT"
+            value = "/dmtr_health"
+          }
+
+          env {
+            name  = "READINESS_ENDPOINT"
+            value = "/ready"
           }
 
           env {

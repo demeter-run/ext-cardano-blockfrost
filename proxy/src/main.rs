@@ -18,7 +18,15 @@ use redb_storage::ReDbCache;
 use regex::Regex;
 use routing::background::RoutingBackgroundService;
 use serde::{Deserialize, Deserializer};
-use std::{collections::HashMap, fmt::Display, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap,
+    fmt::Display,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
 use tiers::TierBackgroundService;
 use tokio::sync::RwLock;
 use tracing::Level;
@@ -54,36 +62,38 @@ fn main() {
         "K8S Auth Service",
         AuthBackgroundService::new(state.clone()),
     );
-    server.add_service(auth_background_service);
 
     let cache_rules_background_service = background_service(
         "K8S Cache Rule Service",
         CacheRuleBackgroundService::new(state.clone(), config.clone()),
     );
-    server.add_service(cache_rules_background_service);
 
     let tier_background_service = background_service(
         "K8S Tier Service",
         TierBackgroundService::new(state.clone(), config.clone()),
     );
-    server.add_service(tier_background_service);
 
     let routing_background_service = background_service(
         "Routing Service",
         RoutingBackgroundService::new(
+            state.clone(),
             Arc::new(config.routing_config_path.clone()),
             config.routing_poll_interval,
         ),
     );
-    server.add_service(routing_background_service);
+    let routing_background_service = server.add_service(routing_background_service);
+
+    let auth_background_service = server.add_service(auth_background_service);
+    let cache_rules_background_service = server.add_service(cache_rules_background_service);
+    let tier_background_service = server.add_service(tier_background_service);
 
     let mut blockfrost_http_proxy = pingora::proxy::http_proxy_service(
         &server.configuration,
         BlockfrostProxy::new(state.clone(), config.clone()),
     );
 
-    let mut tls_settings = TlsSettings::intermediate(&config.ssl_crt_path, &config.ssl_key_path)
-        .unwrap();
+    let mut tls_settings =
+        TlsSettings::intermediate(&config.ssl_crt_path, &config.ssl_key_path).unwrap();
 
     // {
     //     use std::ops::DerefMut;
@@ -95,7 +105,13 @@ fn main() {
     tls_settings.enable_h2();
 
     blockfrost_http_proxy.add_tls_with_settings(&config.proxy_addr, None, tls_settings);
-    server.add_service(blockfrost_http_proxy);
+    let blockfrost_http_proxy = server.add_service(blockfrost_http_proxy);
+    blockfrost_http_proxy.add_dependencies([
+        &auth_background_service,
+        &cache_rules_background_service,
+        &tier_background_service,
+        &routing_background_service,
+    ]);
 
     let mut prometheus_service = pingora::services::listening::Service::prometheus_http_service();
     prometheus_service.add_tcp(&config.prometheus_addr);
@@ -111,6 +127,7 @@ pub struct State {
     limiter: RwLock<HashMap<String, Vec<(TierRate, Rate)>>>,
     metrics: Metrics,
     cache_rules: RwLock<Vec<CacheRule>>,
+    lifecycle: LifecycleState,
 }
 impl State {
     pub async fn get_consumer(&self, key: &str) -> Option<Consumer> {
@@ -125,6 +142,39 @@ impl State {
     pub fn get_eviction() -> &'static Manager {
         &EVICTION
     }
+
+    pub fn set_auth_ready(&self) {
+        self.lifecycle.auth_ready.store(true, Ordering::Release);
+    }
+
+    pub fn set_tiers_ready(&self) {
+        self.lifecycle.tiers_ready.store(true, Ordering::Release);
+    }
+
+    pub fn set_cache_rules_ready(&self) {
+        self.lifecycle
+            .cache_rules_ready
+            .store(true, Ordering::Release);
+    }
+
+    pub fn set_routing_ready(&self) {
+        self.lifecycle.routing_ready.store(true, Ordering::Release);
+    }
+
+    pub fn is_ready(&self) -> bool {
+        self.lifecycle.auth_ready.load(Ordering::Acquire)
+            && self.lifecycle.tiers_ready.load(Ordering::Acquire)
+            && self.lifecycle.cache_rules_ready.load(Ordering::Acquire)
+            && self.lifecycle.routing_ready.load(Ordering::Acquire)
+    }
+}
+
+#[derive(Default)]
+struct LifecycleState {
+    auth_ready: AtomicBool,
+    tiers_ready: AtomicBool,
+    cache_rules_ready: AtomicBool,
+    routing_ready: AtomicBool,
 }
 
 #[derive(Debug, Clone, Default)]

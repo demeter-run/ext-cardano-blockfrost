@@ -10,8 +10,12 @@ use operator::{
     },
     BlockfrostPort,
 };
-use pingora::{server::ShutdownWatch, services::background::BackgroundService};
+use pingora::{
+    server::ShutdownWatch,
+    services::{background::BackgroundService, ServiceReadyNotifier},
+};
 use tokio::pin;
+use tokio::time::{sleep, Duration};
 use tracing::{error, info};
 
 use crate::{Consumer, State};
@@ -27,7 +31,11 @@ impl AuthBackgroundService {
 
 #[async_trait]
 impl BackgroundService for AuthBackgroundService {
-    async fn start(&self, mut _shutdown: ShutdownWatch) {
+    async fn start_with_ready_notifier(
+        &self,
+        mut shutdown: ShutdownWatch,
+        ready_notifier: ServiceReadyNotifier,
+    ) {
         let client = Client::try_default()
             .await
             .expect("failed to create kube client");
@@ -35,9 +43,18 @@ impl BackgroundService for AuthBackgroundService {
         let api = Api::<BlockfrostPort>::all(client.clone());
         let stream = watcher::watcher(api.clone(), ConfigWatcher::default());
         pin!(stream);
+        let mut is_ready = false;
+        let mut ready_notifier = Some(ready_notifier);
 
         loop {
-            let result = stream.try_next().await;
+            let result = tokio::select! {
+                _ = shutdown.changed() => {
+                    info!("auth: shutdown requested");
+                    break;
+                }
+                result = stream.try_next() => result,
+            };
+
             match result {
                 // Stream restart, also run on startup.
                 Ok(Some(Event::Restarted(crds))) => {
@@ -51,6 +68,13 @@ impl BackgroundService for AuthBackgroundService {
                         .collect();
                     *self.state.consumers.write().await = consumers;
                     self.state.limiter.write().await.clear();
+
+                    if !is_ready {
+                        self.state.set_auth_ready();
+                        ready_notifier.take().unwrap().notify_ready();
+                        is_ready = true;
+                        info!("auth: initial consumers loaded");
+                    }
                 }
                 // New port created or updated.
                 Ok(Some(Event::Applied(crd))) => match crd.status {
@@ -88,7 +112,7 @@ impl BackgroundService for AuthBackgroundService {
                 // Unexpected error when streaming CRDs.
                 Err(err) => {
                     error!(error = err.to_string(), "auth: Failed to update crds.");
-                    std::process::exit(1);
+                    sleep(Duration::from_secs(1)).await;
                 }
             }
         }

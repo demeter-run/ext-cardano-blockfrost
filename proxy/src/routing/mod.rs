@@ -1,15 +1,15 @@
 use arc_swap::ArcSwap;
 
 pub mod background;
-mod error;
-mod trie;
-mod router;
 mod config;
+mod error;
+mod router;
+mod trie;
 
-pub use error::RoutingError;
-pub use router::Router;
 #[allow(unused_imports)]
 pub use config::{BackendTemplateConfig, RouteConfig, RoutingConfig};
+pub use error::RoutingError;
+pub use router::Router;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Backend {
