@@ -24,7 +24,7 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
         labels = local.proxy_labels
       }
       spec {
-        termination_grace_period_seconds = 330
+        termination_grace_period_seconds = 45
 
         container {
           name              = "main"
@@ -88,6 +88,16 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
           env {
             name  = "READINESS_ENDPOINT"
             value = "/ready"
+          }
+
+          env {
+            name  = "GRACE_PERIOD_SECONDS"
+            value = "30"
+          }
+
+          env {
+            name  = "GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS"
+            value = "5"
           }
 
           env {

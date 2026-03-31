@@ -479,6 +479,8 @@ mod tests {
             forbidden_endpoints: vec![],
             health_endpoint: "/health".to_string(),
             readiness_endpoint: "/ready".to_string(),
+            grace_period_seconds: 30,
+            graceful_shutdown_timeout_seconds: 5,
         }
     }
 

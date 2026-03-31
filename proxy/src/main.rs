@@ -7,7 +7,10 @@ use operator::kube::ResourceExt;
 use operator::BlockfrostPort;
 use pingora::{
     listeners::tls::TlsSettings,
-    server::{configuration::Opt, Server},
+    server::{
+        configuration::{Opt, ServerConf},
+        Server,
+    },
     services::background::background_service,
 };
 use pingora_cache::eviction::simple_lru::Manager;
@@ -55,7 +58,11 @@ fn main() {
     let state: Arc<State> = Arc::default();
 
     let opt = Opt::default();
-    let mut server = Server::new(Some(opt)).unwrap();
+    let mut server_conf = ServerConf::default();
+    server_conf.grace_period_seconds = Some(config.grace_period_seconds);
+    server_conf.graceful_shutdown_timeout_seconds = Some(config.graceful_shutdown_timeout_seconds);
+
+    let mut server = Server::new_with_opt_and_conf(Some(opt), server_conf);
     server.bootstrap();
 
     let auth_background_service = background_service(

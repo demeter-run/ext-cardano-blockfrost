@@ -18,6 +18,8 @@ This proxy will allow Blockfrost to be accessed externally.
 | ROUTING_POLL_INTERVAL  | routing reload seconds  |
 | HEALTH_ENDPOINT        | /dmtr_health            |
 | READINESS_ENDPOINT     | /ready                  |
+| GRACE_PERIOD_SECONDS   | 30                      |
+| GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS | 5           |
 
 ## Rate limit
 

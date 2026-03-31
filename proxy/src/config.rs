@@ -30,6 +30,10 @@ pub struct Config {
     // Health endpoint
     pub health_endpoint: String,
     pub readiness_endpoint: String,
+
+    // Shutdown settings
+    pub grace_period_seconds: u64,
+    pub graceful_shutdown_timeout_seconds: u64,
 }
 
 impl Config {
@@ -79,6 +83,14 @@ impl Config {
                 .unwrap_or(Duration::from_secs(2)),
             health_endpoint: endpoint_from_env("HEALTH_ENDPOINT", "/dmtr_health"),
             readiness_endpoint: endpoint_from_env("READINESS_ENDPOINT", "/ready"),
+            grace_period_seconds: env::var("GRACE_PERIOD_SECONDS")
+                .unwrap_or("30".to_string())
+                .parse()
+                .expect("GRACE_PERIOD_SECONDS must be a number"),
+            graceful_shutdown_timeout_seconds: env::var("GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS")
+                .unwrap_or("5".to_string())
+                .parse()
+                .expect("GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS must be a number"),
         }
     }
 }
@@ -126,6 +138,8 @@ mod tests {
             env::set_var("ROUTING_POLL_INTERVAL", "2");
             env::set_var("HEALTH_ENDPOINT", "dmtr_health");
             env::set_var("READINESS_ENDPOINT", "/readyz");
+            env::set_var("GRACE_PERIOD_SECONDS", "30");
+            env::set_var("GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS", "5");
         }
 
         let config = Config::new();
@@ -134,5 +148,7 @@ mod tests {
         assert!(!config.forbidden_endpoints[1].matches("/pools/pool_id/blocks"));
         assert_eq!(config.health_endpoint, "/dmtr_health");
         assert_eq!(config.readiness_endpoint, "/readyz");
+        assert_eq!(config.grace_period_seconds, 30);
+        assert_eq!(config.graceful_shutdown_timeout_seconds, 5);
     }
 }
