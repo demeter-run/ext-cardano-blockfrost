@@ -5,9 +5,10 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use parking_lot::RwLock;
 use pingora_cache::key::{CacheHashKey, CompactCacheKey};
+use pingora_cache::storage::MissFinishType;
 use pingora_cache::storage::{HandleHit, HandleMiss, Storage};
 use pingora_cache::trace::SpanHandle;
-use pingora_cache::{CacheKey, CacheMeta, HitHandler, MissHandler};
+use pingora_cache::{CacheKey, CacheMeta, HitHandler, MissHandler, PurgeType};
 use pingora_error::{Error, ErrorType, Result};
 use redb::{Database, ReadableTable, TableDefinition};
 use tokio::sync::watch;
@@ -106,6 +107,10 @@ impl HandleHit for ReDbHitHandler {
     fn as_any(&self) -> &(dyn Any + Send + Sync) {
         self
     }
+
+    fn as_any_mut(&mut self) -> &mut (dyn Any + Send + Sync) {
+        self
+    }
 }
 
 pub struct ReDbMissHandler {
@@ -136,7 +141,7 @@ impl HandleMiss for ReDbMissHandler {
         Ok(())
     }
 
-    async fn finish(self: Box<Self>) -> Result<usize> {
+    async fn finish(self: Box<Self>) -> Result<MissFinishType> {
         let write_txn = match self.db.begin_write() {
             Ok(result) => result,
             Err(_) => {
@@ -172,7 +177,7 @@ impl HandleMiss for ReDbMissHandler {
                 )))
             }
         };
-        Ok(size)
+        Ok(MissFinishType::Created(size))
     }
 }
 
@@ -246,7 +251,12 @@ impl Storage for ReDbCache {
         Ok(Box::new(miss_handler))
     }
 
-    async fn purge(&'static self, key: &CompactCacheKey, _trace: &SpanHandle) -> Result<bool> {
+    async fn purge(
+        &'static self,
+        key: &CompactCacheKey,
+        _purge_type: PurgeType,
+        _trace: &SpanHandle,
+    ) -> Result<bool> {
         let hash = key.combined();
         let table = self.table();
         let write_txn = match self.db.begin_write() {
@@ -330,10 +340,10 @@ impl Storage for ReDbCache {
 #[cfg(test)]
 mod test {
     use super::*;
+    use cf_rustracing::span::Span;
     use once_cell::sync::Lazy;
     use pingora::http::ResponseHeader;
     use pingora_cache::CacheMeta;
-    use rustracing::span::Span;
     use std::time::{Duration, SystemTime};
 
     fn gen_meta() -> CacheMeta {

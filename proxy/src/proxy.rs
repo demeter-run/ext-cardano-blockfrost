@@ -7,7 +7,7 @@ use pingora::{
     proxy::{ProxyHttp, Session},
     upstreams::peer::HttpPeer,
 };
-use pingora_cache::{CacheKey, CacheMeta, RespCacheable};
+use pingora_cache::{CacheKey, CacheMeta, ForcedFreshness, HitHandler, RespCacheable};
 use pingora_limits::rate::Rate;
 use prometheus::{register_int_counter_vec, IntCounterVec};
 use regex::Regex;
@@ -189,9 +189,12 @@ impl BlockfrostProxy {
     async fn respond_health(&self, session: &mut Session, ctx: &mut Context) {
         ctx.is_health_request = true;
         session.set_keepalive(None);
-        session.write_response_body("OK".into()).await.unwrap();
+        session
+            .write_response_body(Some("OK".into()), true)
+            .await
+            .unwrap();
         let header = Box::new(ResponseHeader::build(200, None).unwrap());
-        session.write_response_header(header).await.unwrap();
+        session.write_response_header(header, true).await.unwrap();
     }
 }
 
@@ -229,14 +232,14 @@ impl ProxyHttp for BlockfrostProxy {
 
         if self.is_forbidden_endpoint(path) {
             dbg!(path);
-            session.respond_error(501).await;
+            let _ = session.respond_error(501).await;
             return Ok(true);
         }
 
         let key = self.extract_key(session);
         let consumer = state.get_consumer(&key).await;
         if consumer.is_none() {
-            session.respond_error(401).await;
+            let _ = session.respond_error(401).await;
             return Ok(true);
         }
 
@@ -247,7 +250,7 @@ impl ProxyHttp for BlockfrostProxy {
         ctx.resolved_by = backend.as_str().to_string();
 
         if self.limiter(&ctx.consumer).await? {
-            session.respond_error(429).await;
+            let _ = session.respond_error(429).await;
             return Ok(true);
         }
 
@@ -345,9 +348,13 @@ impl ProxyHttp for BlockfrostProxy {
 
     fn request_cache_filter(&self, session: &mut Session, ctx: &mut Self::CTX) -> Result<()> {
         if ctx.cache_rule.is_some() {
-            session
-                .cache
-                .enable(State::get_cache(), Some(State::get_eviction()), None, None);
+            session.cache.enable(
+                State::get_cache(),
+                Some(State::get_eviction()),
+                None,
+                None,
+                None,
+            );
         }
         Ok(())
     }
@@ -381,10 +388,12 @@ impl ProxyHttp for BlockfrostProxy {
 
     async fn cache_hit_filter(
         &self,
+        _session: &mut Session,
         _meta: &CacheMeta,
+        _hit_handler: &mut HitHandler,
+        _is_fresh: bool,
         ctx: &mut Self::CTX,
-        _req: &RequestHeader,
-    ) -> Result<bool>
+    ) -> Result<Option<ForcedFreshness>>
     where
         Self::CTX: Send + Sync,
     {
@@ -396,7 +405,7 @@ impl ProxyHttp for BlockfrostProxy {
                 &ctx.resolved_by,
             ])
             .inc();
-        Ok(false)
+        Ok(None)
     }
 
     fn cache_miss(&self, session: &mut Session, ctx: &mut Self::CTX) {

@@ -6,6 +6,7 @@ use once_cell::sync::Lazy;
 use operator::kube::ResourceExt;
 use operator::BlockfrostPort;
 use pingora::{
+    listeners::tls::TlsSettings,
     server::{configuration::Opt, Server},
     services::background::background_service,
 };
@@ -15,10 +16,10 @@ use prometheus::{histogram_opts, opts, register_histogram_vec, register_int_coun
 use proxy::BlockfrostProxy;
 use redb_storage::ReDbCache;
 use regex::Regex;
+use routing::background::RoutingBackgroundService;
 use serde::{Deserialize, Deserializer};
 use std::{collections::HashMap, fmt::Display, sync::Arc, time::Duration};
 use tiers::TierBackgroundService;
-use routing::background::RoutingBackgroundService;
 use tokio::sync::RwLock;
 use tracing::Level;
 
@@ -30,9 +31,9 @@ mod config;
 mod endpoints;
 mod proxy;
 mod redb_storage;
+mod routing;
 mod tiers;
 mod utils;
-mod routing;
 
 static CACHE: Lazy<ReDbCache> = Lazy::new(|| ReDbCache::new(Config::new().cache_db_path));
 static EVICTION: Lazy<Manager> = Lazy::new(|| Manager::new(Config::new().cache_max_size_bytes));
@@ -80,18 +81,16 @@ fn main() {
         &server.configuration,
         BlockfrostProxy::new(state.clone(), config.clone()),
     );
-    let mut tls_settings = pingora::listeners::TlsSettings::intermediate(
-        &config.ssl_crt_path,
-        &config.ssl_key_path,
-    )
-    .unwrap();
 
-    {
-        use std::ops::DerefMut;
-        let ctx = tls_settings.deref_mut().deref_mut();
-        ctx.set_num_tickets(2).unwrap();
-        ctx.set_max_early_data(16384).unwrap();
-    }
+    let mut tls_settings = TlsSettings::intermediate(&config.ssl_crt_path, &config.ssl_key_path)
+        .unwrap();
+
+    // {
+    //     use std::ops::DerefMut;
+    //     let ctx = tls_settings.deref_mut().deref_mut();
+    //     ctx.set_num_tickets(2).unwrap();
+    //     ctx.set_max_early_data(16384).unwrap();
+    // }
 
     tls_settings.enable_h2();
 
