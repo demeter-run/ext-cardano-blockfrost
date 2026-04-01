@@ -161,6 +161,15 @@ resource "kubernetes_deployment_v1" "blockfrost_proxy" {
             value = "/network,/pools/extended,/pools/\\w+$"
           }
 
+          env {
+            name  = "MAX_RETRIES"
+            value = 3
+          }
+
+          env {
+            name  = "CONNECTION_TIMEOUT"
+            value = 1
+          }
 
           volume_mount {
             mount_path = "/certs"
