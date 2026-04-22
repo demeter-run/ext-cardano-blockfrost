@@ -41,16 +41,30 @@ static LAST_BYRON_BLOCK: u32 = 4490510;
 fn resolve_backend_for_config(config: &Config, network: &str, path: &str) -> Backend {
     let router = ROUTER.load();
     let backend = router.resolve(path);
+    let backend = if router.supports_network(backend, network) {
+        backend
+    } else {
+        fallback_backend(&router, backend, network)
+    };
 
     match backend {
         Backend::Dolos => {
-            if should_use_dolos(config, network, path) {
+            if should_use_dolos(config, path) {
                 Backend::Dolos
             } else {
-                Backend::Blockfrost
+                fallback_backend(&router, backend, network)
             }
         }
         Backend::Blockfrost | Backend::SubmitApi => backend,
+    }
+}
+
+fn fallback_backend(router: &crate::routing::Router, backend: Backend, network: &str) -> Backend {
+    let default_backend = router.default_backend();
+    if default_backend != backend && router.supports_network(default_backend, network) {
+        default_backend
+    } else {
+        Backend::Blockfrost
     }
 }
 
@@ -60,8 +74,8 @@ fn format_instance_for_config(backend: Backend, network: &str) -> String {
     template.replace("{network}", network)
 }
 
-fn should_use_dolos(config: &Config, network: &str, path: &str) -> bool {
-    !network.starts_with("vector") && config.dolos_enabled && !is_byron_block_path(path)
+fn should_use_dolos(config: &Config, path: &str) -> bool {
+    config.dolos_enabled && !is_byron_block_path(path)
 }
 
 fn is_byron_block_path(path: &str) -> bool {
@@ -453,7 +467,7 @@ impl ProxyHttp for BlockfrostProxy {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::routing::{BackendTemplateConfig, RouteConfig, RoutingConfig};
+    use crate::routing::{BackendConfig, BackendsConfig, RouteConfig, RoutingConfig};
     use once_cell::sync::Lazy;
     use std::path::PathBuf;
     use std::sync::Mutex;
@@ -489,7 +503,7 @@ mod tests {
         let _guard = ROUTER_LOCK.lock().unwrap();
         let cfg = RoutingConfig {
             default_backend: "blockfrost".to_string(),
-            backend_templates: BackendTemplateConfig::default(),
+            backends: BackendsConfig::default(),
             routes: vec![
                 RouteConfig {
                     path: "/blocks/{hash}".to_string(),
@@ -520,10 +534,19 @@ mod tests {
         let _guard = ROUTER_LOCK.lock().unwrap();
         let cfg = RoutingConfig {
             default_backend: "blockfrost".to_string(),
-            backend_templates: BackendTemplateConfig {
-                blockfrost: "bf-{network}:3000".to_string(),
-                dolos: "dolos-{network}:50051".to_string(),
-                submitapi: "submit-{network}:8090".to_string(),
+            backends: BackendsConfig {
+                blockfrost: BackendConfig {
+                    template: "bf-{network}:3000".to_string(),
+                    supported_networks: vec![],
+                },
+                dolos: BackendConfig {
+                    template: "dolos-{network}:50051".to_string(),
+                    supported_networks: vec!["cardano-mainnet".to_string()],
+                },
+                submitapi: BackendConfig {
+                    template: "submit-{network}:8090".to_string(),
+                    supported_networks: vec!["cardano-mainnet".to_string()],
+                },
             },
             routes: vec![RouteConfig {
                 path: "/tx/submit".to_string(),
@@ -536,6 +559,27 @@ mod tests {
         assert_eq!(
             format_instance_for_config(Backend::SubmitApi, "cardano-mainnet"),
             "submit-cardano-mainnet:8090"
+        );
+    }
+
+    #[test]
+    fn unsupported_network_falls_back_to_default_backend() {
+        let _guard = ROUTER_LOCK.lock().unwrap();
+        let cfg = RoutingConfig {
+            default_backend: "blockfrost".to_string(),
+            backends: BackendsConfig::default(),
+            routes: vec![RouteConfig {
+                path: "/blocks/{hash}".to_string(),
+                backend: "dolos".to_string(),
+            }],
+        };
+        let router = cfg.build_router().unwrap();
+        ROUTER.store(Arc::new(router));
+
+        let config = base_config();
+        assert_eq!(
+            resolve_backend_for_config(&config, "vector-testnet", "/blocks/4490511"),
+            Backend::Blockfrost
         );
     }
 }

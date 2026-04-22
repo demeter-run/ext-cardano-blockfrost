@@ -1,4 +1,4 @@
-use super::config::BackendTemplateConfig;
+use super::config::BackendsConfig;
 use super::trie::RouteTrie;
 use super::Backend;
 
@@ -6,7 +6,7 @@ use super::Backend;
 pub struct Router {
     default_backend: Backend,
     trie: RouteTrie,
-    backend_templates: BackendTemplateConfig,
+    backends: BackendsConfig,
 }
 
 impl Default for Router {
@@ -14,21 +14,17 @@ impl Default for Router {
         Self {
             default_backend: Backend::Blockfrost,
             trie: RouteTrie::new(),
-            backend_templates: BackendTemplateConfig::default(),
+            backends: BackendsConfig::default(),
         }
     }
 }
 
 impl Router {
-    pub fn new(
-        default_backend: Backend,
-        trie: RouteTrie,
-        backend_templates: BackendTemplateConfig,
-    ) -> Self {
+    pub fn new(default_backend: Backend, trie: RouteTrie, backends: BackendsConfig) -> Self {
         Self {
             default_backend,
             trie,
-            backend_templates,
+            backends,
         }
     }
 
@@ -36,11 +32,23 @@ impl Router {
         self.trie.resolve(path).unwrap_or(self.default_backend)
     }
 
+    pub fn default_backend(&self) -> Backend {
+        self.default_backend
+    }
+
     pub fn backend_template(&self, backend: Backend) -> &str {
         match backend {
-            Backend::Blockfrost => &self.backend_templates.blockfrost,
-            Backend::Dolos => &self.backend_templates.dolos,
-            Backend::SubmitApi => &self.backend_templates.submitapi,
+            Backend::Blockfrost => &self.backends.blockfrost.template,
+            Backend::Dolos => &self.backends.dolos.template,
+            Backend::SubmitApi => &self.backends.submitapi.template,
+        }
+    }
+
+    pub fn supports_network(&self, backend: Backend, network: &str) -> bool {
+        match backend {
+            Backend::Blockfrost => self.backends.blockfrost.supports_network(network),
+            Backend::Dolos => self.backends.dolos.supports_network(network),
+            Backend::SubmitApi => self.backends.submitapi.supports_network(network),
         }
     }
 }

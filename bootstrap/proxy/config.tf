@@ -57,10 +57,19 @@ locals {
 
   configmap_name = var.environment != null ? "proxy-${var.environment}-config" : "proxy-config"
   // Final dot to avoid external dns resolution
-  routing_backend_templates = {
-    blockfrost = "blockfrost-{network}.${var.namespace}.svc.cluster.local.:3000"
-    dolos      = "internal-{network}-minibf.${var.dolos_dns}.:3000"
-    submitapi  = "submitapi-{network}.${var.submitapi_dns}.:8090"
+  routing_backends = {
+    blockfrost = {
+      template           = "blockfrost-{network}.${var.namespace}.svc.cluster.local.:3000"
+      supported_networks = [] // All networks
+    }
+    dolos = {
+      template           = "internal-{network}-minibf.${var.dolos_dns}.:3000"
+      supported_networks = ["cardano-mainnet", "cardano-preprod", "cardano-preview"]
+    }
+    submitapi = {
+      template           = "submitapi-{network}.${var.submitapi_dns}.:8090"
+      supported_networks = []
+    }
   }
 }
 
@@ -74,9 +83,9 @@ resource "kubernetes_config_map" "proxy" {
     "tiers.toml"       = "${templatefile("${path.module}/proxy-config.toml.tftpl", { tiers = local.tiers })}"
     "cache_rules.toml" = file("${path.module}/cache_rules.toml")
     "routing.toml" = "${templatefile("${path.module}/routing.toml.tftpl", {
-      default_backend   = "blockfrost"
-      backend_templates = local.routing_backend_templates
-      routes            = var.routing_routes
+      default_backend = "blockfrost"
+      backends        = local.routing_backends
+      routes          = var.routing_routes
     })}"
   }
 }

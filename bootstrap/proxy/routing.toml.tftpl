@@ -1,9 +1,16 @@
 default_backend = "${default_backend}"
 
-[backend_templates]
-blockfrost = "${backend_templates.blockfrost}"
-dolos = "${backend_templates.dolos}"
-submitapi = "${backend_templates.submitapi}"
+[backends.blockfrost]
+template = "${backends.blockfrost.template}"
+supported_networks = ${jsonencode(backends.blockfrost.supported_networks)}
+
+[backends.dolos]
+template = "${backends.dolos.template}"
+supported_networks = ${jsonencode(backends.dolos.supported_networks)}
+
+[backends.submitapi]
+template = "${backends.submitapi.template}"
+supported_networks = ${jsonencode(backends.submitapi.supported_networks)}
 
 %{ for route in routes ~}
 [[routes]]

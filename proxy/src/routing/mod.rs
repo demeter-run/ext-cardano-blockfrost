@@ -7,7 +7,7 @@ mod router;
 mod trie;
 
 #[allow(unused_imports)]
-pub use config::{BackendTemplateConfig, RouteConfig, RoutingConfig};
+pub use config::{BackendConfig, BackendsConfig, RouteConfig, RoutingConfig};
 pub use error::RoutingError;
 pub use router::Router;
 
