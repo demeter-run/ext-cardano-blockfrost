@@ -58,9 +58,11 @@ fn main() {
     let state: Arc<State> = Arc::default();
 
     let opt = Opt::default();
-    let mut server_conf = ServerConf::default();
-    server_conf.grace_period_seconds = Some(config.grace_period_seconds);
-    server_conf.graceful_shutdown_timeout_seconds = Some(config.graceful_shutdown_timeout_seconds);
+    let server_conf = ServerConf {
+        grace_period_seconds: Some(config.grace_period_seconds),
+        graceful_shutdown_timeout_seconds: Some(config.graceful_shutdown_timeout_seconds),
+        ..Default::default()
+    };
 
     let mut server = Server::new_with_opt_and_conf(Some(opt), server_conf);
     server.bootstrap();

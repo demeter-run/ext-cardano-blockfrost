@@ -11,6 +11,8 @@ pub struct Config {
     pub prometheus_addr: String,
     pub ssl_crt_path: String,
     pub ssl_key_path: String,
+    pub max_retries: usize,
+    pub connection_timeout: Duration,
     // Dolos settings
     pub dolos_enabled: bool,
 
@@ -55,6 +57,18 @@ impl Config {
             prometheus_addr: env::var("PROMETHEUS_ADDR").expect("PROMETHEUS_ADDR must be set"),
             ssl_crt_path: env::var("SSL_CRT_PATH").expect("SSL_CRT_PATH must be set"),
             ssl_key_path: env::var("SSL_KEY_PATH").expect("SSL_KEY_PATH must be set"),
+            max_retries: env::var("MAX_RETRIES")
+                .unwrap_or("3".to_string())
+                .parse()
+                .expect("MAX_RETRIES must a number"),
+            connection_timeout: env::var("CONNECTION_TIMEOUT")
+                .map(|v| {
+                    Duration::from_secs(
+                        v.parse::<u64>()
+                            .expect("CONNECTION_TIMEOUT must be a number in seconds. eg: 2"),
+                    )
+                })
+                .unwrap_or(Duration::from_secs(1)),
             dolos_enabled: env::var("DOLOS_ENABLED").unwrap_or("false".to_string()) == "true",
             cache_rules_path: env::var("CACHE_RULES_PATH")
                 .map(|v| v.into())

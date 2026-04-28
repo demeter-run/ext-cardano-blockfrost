@@ -2,11 +2,11 @@ use crate::routing::{Backend, ROUTER};
 use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use pingora::http::{RequestHeader, ResponseHeader, StatusCode};
-use pingora::Result;
 use pingora::{
     proxy::{ProxyHttp, Session},
     upstreams::peer::HttpPeer,
 };
+use pingora::{Error, Result};
 use pingora_cache::{CacheKey, CacheMeta, ForcedFreshness, HitHandler, RespCacheable};
 use pingora_limits::rate::Rate;
 use prometheus::{register_int_counter_vec, IntCounterVec};
@@ -239,6 +239,7 @@ pub struct Context {
     is_probe_request: bool,
     start_time: Option<Instant>,
     resolved_by: String,
+    tries: usize,
 }
 
 #[async_trait]
@@ -246,6 +247,21 @@ impl ProxyHttp for BlockfrostProxy {
     type CTX = Context;
     fn new_ctx(&self) -> Self::CTX {
         Context::default()
+    }
+
+    fn fail_to_connect(
+        &self,
+        _session: &mut Session,
+        _peer: &HttpPeer,
+        ctx: &mut Self::CTX,
+        mut e: Box<Error>,
+    ) -> Box<Error> {
+        if ctx.tries >= self.config.max_retries {
+            return e;
+        }
+        ctx.tries += 1;
+        e.set_retry(true);
+        e
     }
 
     async fn request_filter(&self, session: &mut Session, ctx: &mut Self::CTX) -> Result<bool>
@@ -309,7 +325,8 @@ impl ProxyHttp for BlockfrostProxy {
         _session: &mut Session,
         ctx: &mut Self::CTX,
     ) -> Result<Box<HttpPeer>> {
-        let http_peer = HttpPeer::new(&ctx.instance, false, String::default());
+        let mut http_peer = HttpPeer::new(&ctx.instance, false, String::default());
+        http_peer.options.connection_timeout = Some(self.config.connection_timeout);
         Ok(Box::new(http_peer))
     }
 
@@ -495,6 +512,8 @@ mod tests {
             readiness_endpoint: "/ready".to_string(),
             grace_period_seconds: 30,
             graceful_shutdown_timeout_seconds: 5,
+            max_retries: 3,
+            connection_timeout: Duration::from_secs(1),
         }
     }
 
