@@ -48,7 +48,7 @@ pub async fn build_api_key(crd: &BlockfrostPort) -> Result<String, Error> {
         .clone()
         .unwrap_or(config.default_blockfrost_version.to_string());
 
-    let name = format!("blockfrost-auth-{}", &crd.name_any());
+    let name = format!("blockfrost-auth-{}", crd.name_any());
 
     let password = format!("{name}{namespace}").as_bytes().to_vec();
 
